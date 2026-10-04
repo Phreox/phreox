@@ -39,6 +39,12 @@ public final class ModuleManager {
         }
     }
 
+    public synchronized List<Object> controllers() {
+        return modules.keySet().stream()
+                .flatMap(module -> module.controllers().stream())
+                .toList();
+    }
+
     public synchronized List<BackendApi.ModuleView> snapshot() {
         return modules.entrySet().stream()
                 .map(entry -> new BackendApi.ModuleView(entry.getKey().name(), entry.getValue().name()))

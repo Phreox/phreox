@@ -98,6 +98,14 @@ Account-Recovery (z. B. per E-Mail) stellt nur den **Account** wieder her, nie d
 
 PXP folgt einem DAVE-artigen Modell: Der Server ist autoritativ für Membership, kann aber keine Inhalte lesen.
 
+„Der Server“ ist dabei immer die zuständige Authority (Gesamtkonzept §3):
+
+| MLS-Gruppe | Delivery Service / External Sender |
+|---|---|
+| DMs, Group DMs | `phreox-service` |
+| private Space-Channels | Home-`phreox-space` des Space |
+| Voice-/Video-Calls | `phreox-space` Media Runtime |
+
 - Der Server kennt Membership und Permissions jeder privaten Conversation.
 - Der Server ist als **External Sender** in der MLS-Gruppe eingetragen (RFC 9420, `external_senders`). Er erzeugt Add/Remove-Proposals selbst, sobald eine Membership-Änderung autorisiert ist.
 - Clients committen diese Proposals. Ein Commit mit nicht autorisierten Add/Remove-Proposals wird vom Server abgelehnt.
@@ -393,6 +401,19 @@ Das Backend hält entschlüsselte Inhalte. Die lokale HTTP/WebSocket-Bridge auf 
 - zufälliges Session-Token pro Start, das nur die Phreox-App erhält
 - Prüfung von `Host`- und `Origin`-Header (Schutz gegen Zugriffe aus dem Browser und DNS-Rebinding)
 
+Vertrag (umgesetzt in `talk.phreox.backend.bridge`):
+
+| Umgebungsvariable | Bedeutung | Default |
+|---|---|---|
+| `PHREOX_BRIDGE_TOKEN` | Session-Token, mindestens 32 Zeichen | fehlt → Backend erzeugt eines und loggt es (nur für Entwicklung) |
+| `PHREOX_BRIDGE_PORT` | lokaler Port | `8080` |
+| `PHREOX_BRIDGE_ORIGINS` | erlaubte Origins, kommagetrennt | `http://localhost:5173` (Vite) |
+
+- Jeder HTTP-Request und jeder WebSocket-Upgrade braucht `Authorization: Bearer <token>`.
+- `Host` muss `127.0.0.1:<port>` oder `localhost:<port>` sein.
+- Ein vorhandener `Origin` muss in der Liste stehen. Requests ohne `Origin` (Electron-Main-Prozess) sind erlaubt, brauchen aber das Token. `Origin: null` wird abgelehnt.
+- Electron erzeugt das Token, startet das Backend damit und setzt den Header im Main-Prozess per `session.webRequest` auf Requests an die Bridge. Der Renderer kennt das Token nie, damit Plugins oder XSS im Renderer es nicht auslesen können.
+
 ---
 
 ## Metadaten
@@ -428,7 +449,7 @@ Der Server kennt bzw. muss je nach Funktion kennen:
 
 ## Offene Punkte
 
-- **Föderation:** Annahme für v1 ist ein einzelnes autoritatives Phreox-Netz ohne Föderation. Muss noch bestätigt werden.
+- **Föderation:** entschieden, keine klassische Homeserver-Föderation in v1 (Gesamtkonzept §14).
 - **QUIC in Java:** Auswahl der Implementierung (z. B. Netty QUIC, kwik).
 - **History-Modus** für private Channels (nicht v1).
 - **Header-Optimierung** nach ersten Messungen.

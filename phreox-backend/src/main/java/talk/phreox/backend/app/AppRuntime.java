@@ -1,23 +1,28 @@
 package talk.phreox.backend.app;
 
 import io.javalin.Javalin;
+import talk.phreox.backend.bridge.BridgeConfig;
 import talk.phreox.backend.bridge.FrontendBridge;
 import talk.phreox.backend.event.EventBus;
 import talk.phreox.backend.event.IEventBus;
+import talk.phreox.backend.message.MessageModule;
 import talk.phreox.backend.task.WorkEngine;
 
 public final class AppRuntime implements AutoCloseable {
-
-    private static final String HOST = "127.0.0.1";
-    private static final int PORT = 8080;
 
     private final AppState state = new AppState();
     private final IEventBus events = new EventBus();
     private final WorkEngine work = new WorkEngine();
     private final ModuleManager modules = new ModuleManager(events);
-    private final FrontendBridge bridge = new FrontendBridge(state, modules, events);
+    private final BridgeConfig config;
+    private final FrontendBridge bridge;
 
     private Javalin server;
+
+    public AppRuntime(BridgeConfig config) {
+        this.config = config;
+        this.bridge = new FrontendBridge(config, state, modules, events);
+    }
 
     public void start() {
         if (state.status() != BackendStatus.STARTING) {
@@ -29,11 +34,11 @@ public final class AppRuntime implements AutoCloseable {
 
             modules.startAll();
 
-            server = Javalin.create(config -> {
-                config.jetty.host = HOST;
-                config.jetty.port = PORT;
+            server = Javalin.create(javalin -> {
+                javalin.jetty.host = BridgeConfig.HOST;
+                javalin.jetty.port = config.port();
 
-                bridge.configure(config);
+                bridge.configure(javalin);
             });
 
             server.start();
@@ -83,5 +88,6 @@ public final class AppRuntime implements AutoCloseable {
     }
 
     private void registerModules() {
+        modules.register(new MessageModule(work, events));
     }
 }

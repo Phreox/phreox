@@ -16,6 +16,9 @@ public final class BackendApi {
     public record Event(long sequence, String type, long timestamp, Object data) {
     }
 
+    public record ErrorResponse(String error) {
+    }
+
     private BackendApi() {
     }
 }

@@ -1,4 +1,4 @@
-package talk.phreox.api.http;
+package talk.phreox.api.http.param;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
-public @interface PathParam {
+public @interface Header {
 
     String value();
 }

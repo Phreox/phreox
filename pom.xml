@@ -22,6 +22,8 @@
         <javalin.version>7.2.3</javalin.version>
         <polydb.version>0.2.2-DEV</polydb.version>
         <junit.version>5.14.4</junit.version>
+        <jackson.version>3.2.0</jackson.version>
+        <slf4j.version>2.0.18</slf4j.version>
     </properties>
 
     <repositories>
@@ -47,6 +49,16 @@
                 <groupId>de.tnttastisch</groupId>
                 <artifactId>polydb-core</artifactId>
                 <version>${polydb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
