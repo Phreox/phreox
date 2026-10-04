@@ -1,0 +1,21 @@
+{
+  "name": "phreox-app",
+  "private": true,
+  "version": "0.1.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && electron ."
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "electron": "^44.5.1",
+    "typescript": "^7.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron"]
+  }
+}

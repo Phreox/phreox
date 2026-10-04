@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>talk.phreox</groupId>
+    <artifactId>phreox-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>phreox-api</module>
+        <module>phreox-backend</module>
+        <module>phreox-server</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javalin.version>7.2.3</javalin.version>
+        <polydb.version>0.2.2-DEV</polydb.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>tnttastisch-repo-releases</id>
+            <url>https://repo.tnttastisch.de/releases</url>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>talk.phreox</groupId>
+                <artifactId>phreox-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.javalin</groupId>
+                <artifactId>javalin</artifactId>
+                <version>${javalin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.tnttastisch</groupId>
+                <artifactId>polydb-core</artifactId>
+                <version>${polydb.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

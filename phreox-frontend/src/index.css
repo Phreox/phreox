@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background-darkend: #0b0c0e;
+    --background-dark: #121417;
+    --background-surface: #191b1f;
+    --background-panel: #222529;
+
+    --border-darkend: #1a1c20;
+    --border-dark: #212429;
+    --border-surface: #292d33;
+    --border-panel: #33373e;
+  
+    --text-default: #ecedef;
+    --text-washed: #a8acb2;
+    --text-dark: #858b93;
+  }
+
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--background-darkend);
+    color: var(--text-default);
+  }
+}
