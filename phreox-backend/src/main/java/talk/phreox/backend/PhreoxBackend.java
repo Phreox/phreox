@@ -1,12 +1,14 @@
 package talk.phreox.backend;
 
-import io.javalin.Javalin;
-import talk.phreox.api.ApiRoutes;
+import talk.phreox.backend.app.AppRuntime;
 
-public class PhreoxBackend {
+public final class PhreoxBackend {
 
     public static void main(String[] args) {
-        Javalin.create(config -> config.routes.get(ApiRoutes.HEALTH, ctx -> ctx.result("UP")))
-                .start(8080);
+        var runtime = new AppRuntime();
+
+        Runtime.getRuntime().addShutdownHook(Thread.ofPlatform().name("phreox-shutdown").unstarted(runtime::close));
+
+        runtime.start();
     }
 }

@@ -12,7 +12,8 @@
     <modules>
         <module>phreox-api</module>
         <module>phreox-backend</module>
-        <module>phreox-server</module>
+        <module>phreox-service</module>
+        <module>phreox-space</module>
     </modules>
 
     <properties>
@@ -20,6 +21,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javalin.version>7.2.3</javalin.version>
         <polydb.version>0.2.2-DEV</polydb.version>
+        <junit.version>5.14.4</junit.version>
     </properties>
 
     <repositories>
@@ -45,6 +47,12 @@
                 <groupId>de.tnttastisch</groupId>
                 <artifactId>polydb-core</artifactId>
                 <version>${polydb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
