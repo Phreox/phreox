@@ -6,15 +6,17 @@
     --background-dark: #121417;
     --background-surface: #191b1f;
     --background-panel: #222529;
+    --background-raised: #2b2f34;
 
     --border-darkend: #1a1c20;
     --border-dark: #212429;
     --border-surface: #292d33;
     --border-panel: #33373e;
+    --border-raised: #3d424a;
   
     --text-default: #ecedef;
     --text-washed: #a8acb2;
-    --text-dark: #858b93;
+    --text-dark: #5f656d;
   }
 
   *, *::before, *::after {
@@ -26,5 +28,19 @@
   body {
     background-color: var(--background-darkend);
     color: var(--text-default);
+  }
+
+}
+
+@theme {
+  --animate-fade-in: fade-in 0.2s ease-in-out forwards;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
