@@ -3,6 +3,7 @@ package talk.phreox.backend.app;
 import io.javalin.Javalin;
 import talk.phreox.backend.bridge.BridgeConfig;
 import talk.phreox.backend.bridge.FrontendBridge;
+import talk.phreox.backend.connection.ConnectionModule;
 import talk.phreox.backend.event.EventBus;
 import talk.phreox.backend.event.IEventBus;
 import talk.phreox.backend.message.MessageModule;
@@ -15,12 +16,19 @@ public final class AppRuntime implements AutoCloseable {
     private final WorkEngine work = new WorkEngine();
     private final ModuleManager modules = new ModuleManager(events);
     private final BridgeConfig config;
+    private final String serviceUrl;
     private final FrontendBridge bridge;
 
     private Javalin server;
 
     public AppRuntime(BridgeConfig config) {
+        this(config, null);
+    }
+
+    /** @param serviceUrl base URL of phreox-service, null while none is configured */
+    public AppRuntime(BridgeConfig config, String serviceUrl) {
         this.config = config;
+        this.serviceUrl = serviceUrl;
         this.bridge = new FrontendBridge(config, state, modules, events);
     }
 
@@ -88,6 +96,7 @@ public final class AppRuntime implements AutoCloseable {
     }
 
     private void registerModules() {
+        modules.register(new ConnectionModule(serviceUrl, work, events));
         modules.register(new MessageModule(work, events));
     }
 }

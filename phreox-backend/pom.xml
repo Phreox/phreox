@@ -18,6 +18,10 @@
             <artifactId>phreox-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>talk.phreox</groupId>
+            <artifactId>phreox-server-common</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
         </dependency>

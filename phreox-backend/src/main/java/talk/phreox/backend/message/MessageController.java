@@ -1,7 +1,9 @@
 package talk.phreox.backend.message;
 
+import talk.phreox.api.http.DELETE;
 import talk.phreox.api.http.GET;
 import talk.phreox.api.http.POST;
+import talk.phreox.api.http.PUT;
 import talk.phreox.api.http.Path;
 import talk.phreox.api.http.param.Body;
 import talk.phreox.api.http.param.DefaultValue;
@@ -27,5 +29,29 @@ public final class MessageController {
     @Path("/{channelId}/messages")
     public MessageView send(@PathParam("channelId") String channelId, @Body SendMessageRequest request) {
         return messages.send(channelId, request);
+    }
+
+    @PUT
+    @Path("/{channelId}/messages/{messageId}")
+    public MessageView edit(@PathParam("channelId") String channelId, @PathParam("messageId") String messageId, @Body EditMessageRequest request) {
+        return messages.edit(channelId, messageId, request == null ? null : request.content());
+    }
+
+    @DELETE
+    @Path("/{channelId}/messages/{messageId}")
+    public void delete(@PathParam("channelId") String channelId, @PathParam("messageId") String messageId) {
+        messages.delete(channelId, messageId);
+    }
+
+    @PUT
+    @Path("/{channelId}/messages/{messageId}/reactions/{emoji}")
+    public MessageView react(@PathParam("channelId") String channelId, @PathParam("messageId") String messageId, @PathParam("emoji") String emoji) {
+        return messages.react(channelId, messageId, emoji, true);
+    }
+
+    @DELETE
+    @Path("/{channelId}/messages/{messageId}/reactions/{emoji}")
+    public MessageView unreact(@PathParam("channelId") String channelId, @PathParam("messageId") String messageId, @PathParam("emoji") String emoji) {
+        return messages.react(channelId, messageId, emoji, false);
     }
 }

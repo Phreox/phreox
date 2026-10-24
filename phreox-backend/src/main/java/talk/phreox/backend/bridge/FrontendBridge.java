@@ -6,10 +6,11 @@ import io.javalin.json.JavalinJackson3;
 import io.javalin.websocket.WsConfig;
 import talk.phreox.api.ApiRoutes;
 import talk.phreox.api.BackendApi;
+import talk.phreox.api.http.ApiException;
 import talk.phreox.backend.app.AppState;
 import talk.phreox.backend.app.BackendController;
 import talk.phreox.backend.app.ModuleManager;
-import talk.phreox.backend.bridge.route.ControllerRouter;
+import talk.phreox.common.route.ControllerRouter;
 import talk.phreox.backend.event.IEventBus;
 
 import java.util.Map;
@@ -36,6 +37,10 @@ public final class FrontendBridge {
 
         config.routes.before(guard::check);
         config.routes.wsBeforeUpgrade(guard::check);
+
+        config.routes.exception(ApiException.class, (exception, context) -> {
+            context.status(exception.status()).json(new BackendApi.ErrorResponse(exception.getMessage()));
+        });
 
         config.routes.exception(IllegalArgumentException.class, (exception, context) -> {
             context.status(HttpStatus.BAD_REQUEST).json(new BackendApi.ErrorResponse(exception.getMessage()));

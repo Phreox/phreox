@@ -65,6 +65,33 @@ class BridgeIntegrationTest {
     }
 
     @Test
+    void editsDeletesAndReactsToMessages() throws Exception {
+        var created = send(authorized("/channels/room/messages").POST(HttpRequest.BodyPublishers.ofString("{\"content\":\"alt\"}")));
+        var id = created.body().replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        var edited = send(authorized("/channels/room/messages/" + id).PUT(HttpRequest.BodyPublishers.ofString("{\"content\":\"neu\"}")));
+        var reacted = send(authorized("/channels/room/messages/" + id + "/reactions/ok").PUT(HttpRequest.BodyPublishers.noBody()));
+        var deleted = send(authorized("/channels/room/messages/" + id).DELETE());
+        var missing = send(authorized("/channels/room/messages/" + id).DELETE());
+
+        assertTrue(edited.body().contains("\"content\":\"neu\""));
+        assertTrue(reacted.body().contains("\"reactions\":[\"ok\"]"));
+        assertEquals(204, deleted.statusCode());
+        assertEquals(404, missing.statusCode());
+    }
+
+    @Test
+    void managesSpaceConnections() throws Exception {
+        var empty = send(authorized("/connections/spaces").GET());
+        var service = send(authorized("/connections/service").GET());
+        var rejected = send(authorized("/connections/spaces").POST(HttpRequest.BodyPublishers.ofString("{\"url\":\"http://example.com\"}")));
+
+        assertEquals("[]", empty.body());
+        assertTrue(service.body().contains("NOT_CHECKED"));
+        assertEquals(400, rejected.statusCode());
+    }
+
+    @Test
     void mapsInvalidInputToBadRequest() throws Exception {
         var emptyMessage = send(authorized("/channels/general/messages").POST(HttpRequest.BodyPublishers.ofString("{\"content\":\" \"}")));
         var invalidLimit = send(authorized("/channels/general/messages?limit=abc").GET());

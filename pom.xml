@@ -11,6 +11,7 @@
 
     <modules>
         <module>phreox-api</module>
+        <module>phreox-server-common</module>
         <module>phreox-backend</module>
         <module>phreox-service</module>
         <module>phreox-space</module>
@@ -38,6 +39,11 @@
             <dependency>
                 <groupId>talk.phreox</groupId>
                 <artifactId>phreox-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>talk.phreox</groupId>
+                <artifactId>phreox-server-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

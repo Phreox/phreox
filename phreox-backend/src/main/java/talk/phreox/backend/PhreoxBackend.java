@@ -7,6 +7,8 @@ import talk.phreox.backend.bridge.BridgeConfig;
 
 public final class PhreoxBackend {
 
+    private static final String SERVICE_URL_VARIABLE = "PHREOX_SERVICE_URL";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(PhreoxBackend.class);
 
     public static void main(String[] args) {
@@ -17,7 +19,7 @@ public final class PhreoxBackend {
             LOGGER.warn("{} not set, generated development token: {}", BridgeConfig.TOKEN_VARIABLE, config.token());
         }
 
-        var runtime = new AppRuntime(config);
+        var runtime = new AppRuntime(config, System.getenv(SERVICE_URL_VARIABLE));
 
         Runtime.getRuntime().addShutdownHook(Thread.ofPlatform().name("phreox-shutdown").unstarted(runtime::close));
 

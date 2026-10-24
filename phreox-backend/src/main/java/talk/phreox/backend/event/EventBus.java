@@ -1,5 +1,7 @@
 package talk.phreox.backend.event;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import talk.phreox.api.BackendApi;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -7,6 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public final class EventBus implements IEventBus {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBus.class);
 
     private final AtomicLong sequence = new AtomicLong();
     private final CopyOnWriteArrayList<Consumer<BackendApi.Event>> listeners = new CopyOnWriteArrayList<>();
@@ -33,7 +37,7 @@ public final class EventBus implements IEventBus {
         try {
             listener.accept(event);
         } catch (RuntimeException exception) {
-            System.err.println("Event listener failed: " + exception.getMessage());
+            LOGGER.warn("Event listener failed", exception);
         }
     }
 }
