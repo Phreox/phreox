@@ -1,5 +1,8 @@
 import { Icon } from "@iconify/react";
 import { Dispatch, SetStateAction, useState } from "react";
+import { statusStateData } from "../../data/status.ts";
+import { currentUser } from "../../data/users.ts";
+import { Avatar } from "../Avatar.tsx";
 
 export function ProfileCard(
   { edit, hidden, statusState }: {
@@ -17,18 +20,22 @@ export function ProfileCard(
 
   return (
     <div
-      className={`absolute top-16 right-0 w-80 ${
+      className={`absolute top-16 right-0 z-50 w-80 ${
         hidden ? "hidden" : "flex"
       } flex-col gap-2 bg-(--background-surface) border border-(--border-panel) rounded-xl animate-fade-in`}
     >
       <div className="w-full h-18 bg-(--background-panel) border-b border-(--border-panel) rounded-t-xl">
       </div>
 
-      <div className="absolute top-10 left-3 flex justify-center items-center w-16 h-16 rounded-full bg-[#ae38c2] border-4 border-(--background-surface)">
-        <div>T</div>
-
-        <div className="absolute -bottom-0.25 -right-0.25 w-4 h-4 bg-[#33ed66] border-3 border-(--background-darkend) rounded-full">
-        </div>
+      <div className="absolute top-10 left-3">
+        <Avatar
+          name={currentUser.displayname}
+          seed={currentUser.id}
+          color={currentUser.color}
+          src={currentUser.profilePicture}
+          status={status}
+          size="lg"
+        />
       </div>
 
       <div className="p-4 flex flex-col gap-2">
@@ -87,21 +94,6 @@ export function ProfileCard(
 export function ProfileStatusChange(
   { statusState }: { statusState: [string, Dispatch<SetStateAction<string>>] },
 ) {
-  const statusse = [
-    { icon: "akar-icons:circle", color: "#33ed70", label: "Online" },
-    { icon: "boxicons:moon", color: "#eea333", label: "Away" },
-    {
-      icon: "akar-icons:circle-minus",
-      color: "#ee0333",
-      label: "Do not disturb",
-    },
-    {
-      icon: "fluent:presence-offline-10-regular",
-      color: "#565656",
-      label: "Invisible",
-    },
-  ];
-
   const [show, setShow] = useState(false);
   const [status, setStatus] = statusState;
 
@@ -134,8 +126,8 @@ export function ProfileStatusChange(
         inert={!show}
       >
         <div className="overflow-hidden flex flex-col gap-2">
-          {statusse &&
-            statusse.map((status) => (
+          {statusStateData &&
+            statusStateData.map((status) => (
               <div
                 key={status.label}
                 className="px-4 py-2 flex items-center gap-2 bg-(--background-panel) rounded-xl text-(--text-washed) transition-all duration-200 ease-in-out cursor-pointer hover:bg-(--background-raised)"

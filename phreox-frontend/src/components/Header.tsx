@@ -1,9 +1,14 @@
 import { Icon } from "@iconify/react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { currentUser } from "../data/users.ts";
+import { sectionTypes, useSection } from "../data/section.ts";
+import { Avatar } from "./Avatar.tsx";
 import { ProfileCard } from "./user/ProfileCard.tsx";
 
 export function Header() {
-  const [currentSection, setCurrentSection] = useState("spaces");
+  const section = useSection();
+  const navigate = useNavigate();
   const [currentSpace, setCurrentSpace] = useState([
     "Friends",
     "Jason",
@@ -12,28 +17,28 @@ export function Header() {
   return (
     <div className="w-full h-14 flex items-center pt-2 px-4">
       <div className="flex-1 flex gap-6">
-        <div className="w-74 flex gap-6">
+        <div className="w-72 flex gap-6">
           <div className="relative w-full px-2 py-1 flex gap-1 bg-(--background-dark) rounded-xl">
             <div
               className={`absolute top-1 bottom-1 left-2 w-[calc(50%-0.625rem)] bg-(--background-panel) border border-(--border-panel) rounded-xl transition-transform duration-200 ease-in-out ${
-                currentSection === "chats"
+                section === "chats"
                   ? "translate-x-[calc(100%+0.25rem)]"
                   : "translate-x-0"
               }`}
             />
 
-            {(["spaces", "chats"] as const).map((section) => (
+            {sectionTypes.map((sectionType) => (
               <button
-                key={section}
+                key={sectionType}
                 type="button"
                 className={`relative flex-1 p-2 flex justify-center items-center rounded-xl text-sm cursor-pointer transition-colors duration-200 ease-in-out ${
-                  currentSection === section
+                  section === sectionType
                     ? "text-(--text-default)"
                     : "text-(--text-washed) hover:text-(--text-default)"
                 }`}
-                onClick={() => setCurrentSection(section)}
+                onClick={() => navigate(`/${sectionType}`)}
               >
-                {section === "spaces" ? "Spaces" : "Chats"}
+                {sectionType === "spaces" ? "Spaces" : "Chats"}
               </button>
             ))}
           </div>
@@ -85,20 +90,42 @@ export function Profile() {
   const [hidden, setHidden] = useState(true);
   const statusState = useState("Online");
   const [status, setStatus] = statusState;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (hidden) return;
+
+    function handleMouseDown(event: MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) setHidden(true);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setHidden(true);
+    }
+
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [hidden]);
 
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <div
         className="relative select-none px-4 py-2 w-40 flex justify-between items-center gap-2 transition-colors duration-200 ease-in-out cursor-pointer hover:bg-(--background-dark) rounded-xl"
         onClick={() => setHidden(!hidden)}
       >
         <div className="flex gap-2 min-w-0">
-          <div className="relative shrink-0 flex justify-center items-center w-8 h-8 rounded-full bg-[#ae38c2]">
-            <div>T</div>
-
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#33ed66] border-2 border-(--background-darkend) rounded-full">
-            </div>
-          </div>
+          <Avatar
+            name={currentUser.displayname}
+            seed={currentUser.id}
+            color={currentUser.color}
+            src={currentUser.profilePicture}
+            status={status}
+          />
 
           <div className="flex flex-col min-w-0">
             <p className="text-sm">Tom</p>
