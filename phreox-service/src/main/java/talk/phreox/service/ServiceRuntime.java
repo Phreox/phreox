@@ -8,6 +8,7 @@ import talk.phreox.common.module.ModuleHost;
 import talk.phreox.service.auth.AccountService;
 import talk.phreox.service.auth.AuthController;
 import talk.phreox.service.auth.LoginThrottle;
+import talk.phreox.service.auth.SpaceTokenService;
 import talk.phreox.service.config.ServiceConfig;
 import talk.phreox.service.crypto.PasswordHasher;
 import talk.phreox.service.crypto.ServiceSigner;
@@ -57,7 +58,7 @@ public final class ServiceRuntime implements AutoCloseable {
         var registry = new NodeRegistry(signer, config.reservedDomains(), clock);
         var entitlements = new EntitlementService(signer, clock);
 
-        modules.register(new ControllerModule("identity", List.of(ServiceApi.CAPABILITY_IDENTITY), List.of(new AuthController(accounts))));
+        modules.register(new ControllerModule("identity", List.of(ServiceApi.CAPABILITY_IDENTITY), List.of(new AuthController(accounts, new SpaceTokenService(signer, registry, clock)))));
         modules.register(new ControllerModule("devices", List.of(ServiceApi.CAPABILITY_DEVICES), List.of(new DeviceController(accounts, devices, friends))));
         modules.register(new ControllerModule("friends", List.of(ServiceApi.CAPABILITY_FRIENDS), List.of(new FriendController(accounts, friends))));
         modules.register(new ControllerModule("dm", List.of(ServiceApi.CAPABILITY_DM, ServiceApi.CAPABILITY_GROUP_DM), List.of(new ConversationController(accounts, conversations))));

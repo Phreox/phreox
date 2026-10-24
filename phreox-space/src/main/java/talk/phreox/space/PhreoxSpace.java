@@ -2,6 +2,7 @@ package talk.phreox.space;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import talk.phreox.space.auth.ServiceKeys;
 
 public final class PhreoxSpace {
 
@@ -10,9 +11,14 @@ public final class PhreoxSpace {
     public static void main(String[] args) {
         var config = SpaceConfig.fromEnvironment(System.getenv());
 
-        if (!config.devAuth()) {
-            LOGGER.warn("No authenticator available for service tokens yet, all requests except health and capabilities are rejected. Set {}=true for development.",
-                    SpaceConfig.DEV_AUTH_VARIABLE);
+        if (config.serviceKey() == null && config.serviceUrl() != null) {
+            config = config.withServiceKey(ServiceKeys.fetch(config.serviceUrl()));
+            LOGGER.info("Using the service key fetched from the configured service URL. Pin it with {} to avoid trusting the first answer.", SpaceConfig.SERVICE_KEY_VARIABLE);
+        }
+
+        if (!config.devAuth() && !config.tokenAuth()) {
+            LOGGER.warn("No authentication configured, all requests except health and capabilities are rejected. Set {} (and {}) or {}=true for development.",
+                    SpaceConfig.SERVICE_KEY_VARIABLE, SpaceConfig.AUDIENCE_VARIABLE, SpaceConfig.DEV_AUTH_VARIABLE);
         }
 
         var runtime = new SpaceRuntime(config);

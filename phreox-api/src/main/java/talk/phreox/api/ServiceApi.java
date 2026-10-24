@@ -29,6 +29,13 @@ public final class ServiceApi {
     public record AccountView(UUID id, String username) {
     }
 
+    /** @param audience host of a registered space node, as listed in its node identity */
+    public record SpaceTokenRequest(String audience) {
+    }
+
+    public record SpaceTokenResponse(String token, long expiresAt) {
+    }
+
     public record RegisterDeviceRequest(String name, String identityKey, String signatureKey, List<String> keyPackages) {
     }
 

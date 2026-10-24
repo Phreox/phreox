@@ -9,6 +9,7 @@ import talk.phreox.common.module.ModuleHost;
 import talk.phreox.space.auth.Authenticator;
 import talk.phreox.space.auth.DenyAllAuthenticator;
 import talk.phreox.space.auth.DevAuthenticator;
+import talk.phreox.space.auth.ServiceTokenAuthenticator;
 import talk.phreox.space.event.EventController;
 import talk.phreox.space.event.SpaceEvents;
 import talk.phreox.space.guild.GuildController;
@@ -28,6 +29,7 @@ import talk.phreox.space.permission.PermissionController;
 import talk.phreox.space.permission.PermissionModule;
 import talk.phreox.space.permission.PermissionService;
 
+import java.time.Clock;
 import java.util.List;
 
 public final class SpaceRuntime implements AutoCloseable {
@@ -42,7 +44,7 @@ public final class SpaceRuntime implements AutoCloseable {
     private boolean closed;
 
     public SpaceRuntime(SpaceConfig config) {
-        this(config, config.devAuth() ? developmentAuthenticator() : new DenyAllAuthenticator());
+        this(config, authenticator(config));
     }
 
     public SpaceRuntime(SpaceConfig config, Authenticator authenticator) {
@@ -98,6 +100,18 @@ public final class SpaceRuntime implements AutoCloseable {
 
     public ModuleHost modules() {
         return modules;
+    }
+
+    private static Authenticator authenticator(SpaceConfig config) {
+        if (config.devAuth()) {
+            return developmentAuthenticator();
+        }
+
+        if (config.tokenAuth()) {
+            return new ServiceTokenAuthenticator(config.serviceKey(), config.audience(), Clock.systemUTC());
+        }
+
+        return new DenyAllAuthenticator();
     }
 
     private static Authenticator developmentAuthenticator() {

@@ -11,9 +11,11 @@ import talk.phreox.api.http.param.Header;
 public final class AuthController {
 
     private final AccountService accounts;
+    private final SpaceTokenService spaceTokens;
 
-    public AuthController(AccountService accounts) {
+    public AuthController(AccountService accounts, SpaceTokenService spaceTokens) {
         this.accounts = accounts;
+        this.spaceTokens = spaceTokens;
     }
 
     @POST
@@ -40,6 +42,17 @@ public final class AuthController {
     @Path("/logout")
     public void logout(@Header("Authorization") String authorization) {
         accounts.logout(authorization);
+    }
+
+    /** Exchanges the session for a token that is only valid on one registered space node. */
+    @POST
+    @Path("/space-token")
+    public ServiceApi.SpaceTokenResponse spaceToken(@Header("Authorization") String authorization, @Body ServiceApi.SpaceTokenRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is missing");
+        }
+
+        return spaceTokens.issue(accounts.authenticate(authorization), request.audience());
     }
 
     @GET
