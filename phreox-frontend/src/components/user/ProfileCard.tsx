@@ -1,6 +1,10 @@
 import { Icon } from "@iconify/react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { statusStateData } from "../../data/status.ts";
+import { GameLogo } from "../GameLogo.tsx";
+import { useNow } from "../../lib/useNow.ts";
+import { usePresence } from "../../lib/usePresence.ts";
+import { useWindowFocus } from "../../lib/useWindowFocus.ts";
 import { currentUser } from "../../data/users.ts";
 import { Avatar } from "../Avatar.tsx";
 import type { UserData } from "../chat/types.ts";
@@ -21,6 +25,10 @@ export function ProfileCard(
   },
 ) {
   const status = statusState?.[0] ?? user.status;
+  const presence = usePresence();
+  const focused = useWindowFocus();
+  // The elapsed time counts up every second while the window has focus.
+  const now = useNow(presence?.state === "playing" && focused ? 1000 : null);
 
   return (
     <div
@@ -75,6 +83,25 @@ export function ProfileCard(
           </div>
         </div>
 
+        {edit && presence?.state === "playing" && (
+          <div className="flex items-center gap-3 p-2 bg-(--background-panel) border border-(--border-panel) rounded-xl">
+            <GameLogo
+              name={presence.game.name}
+              src={presence.game.icon ?? presence.game.image}
+            />
+
+            <div className="min-w-0 flex flex-col">
+              <p className="text-xs text-(--text-dark)">Spielt gerade</p>
+
+              <p className="truncate text-sm">{presence.game.name}</p>
+
+              <p className="text-xs text-(--text-dark) tabular-nums">
+                Seit {formatElapsed(now - presence.started_at)}
+              </p>
+            </div>
+          </div>
+        )}
+
         {edit && statusState && (
           <div>
             <ProfileStatusChange statusState={statusState} />
@@ -98,6 +125,20 @@ export function ProfileCard(
       </div>
     </div>
   );
+}
+
+/** `mm:ss`, or `h:mm:ss` from one hour on. */
+function formatElapsed(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
 }
 
 export function ProfileStatusChange(

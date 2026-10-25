@@ -5,6 +5,7 @@ import { currentUser } from "../data/users.ts";
 import { sectionTypes, useSection } from "../data/section.ts";
 import { Avatar } from "./Avatar.tsx";
 import { SettingsDialog } from "./settings/SettingsDialog.tsx";
+import { useWindowFocus } from "../lib/useWindowFocus.ts";
 import { ProfileCard } from "./user/ProfileCard.tsx";
 
 export function Header() {
@@ -76,6 +77,34 @@ export function Profile() {
   const statusState = useState("Online");
   const [status, setStatus] = statusState;
   const ref = useRef<HTMLDivElement>(null);
+
+  const focused = useWindowFocus();
+  const statusRef = useRef(status);
+  const statusBeforeAway = useRef<string | null>(null);
+
+  statusRef.current = status;
+
+  // Without focus for 5 seconds the status becomes "Away". It is restored
+  // when the window gets focus again.
+  useEffect(() => {
+    if (focused) {
+      if (statusBeforeAway.current !== null) {
+        setStatus(statusBeforeAway.current);
+        statusBeforeAway.current = null;
+      }
+
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (statusRef.current === "Away") return;
+
+      statusBeforeAway.current = statusRef.current;
+      setStatus("Away");
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [focused]);
 
   useEffect(() => {
     if (hidden) return;

@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
-    "start": "tsc && electron ."
+    "bundle:presence": "node scripts/bundle-presence.mjs",
+    "build": "npm run bundle:presence && tsc",
+    "start": "npm run build && electron ."
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2"
