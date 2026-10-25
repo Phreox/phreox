@@ -1,4 +1,5 @@
 import { Avatar } from "../Avatar.tsx";
+import { UserTag } from "../user/UserTag.tsx";
 import { users } from "../../data/users.ts";
 import type { GroupData, UserData } from "./types.ts";
 
@@ -33,9 +34,11 @@ export function ChatSidePanel({ user, group }: {
 
               <div className="min-w-0 flex flex-col">
                 <p className="truncate text-sm">{member.displayname}</p>
-                <p className="truncate text-xs text-(--text-dark)">
-                  @{member.username}
-                </p>
+                <UserTag
+                  username={member.username}
+                  discriminator={member.discriminator}
+                  className="truncate text-xs text-(--text-dark)"
+                />
               </div>
             </div>
           ))}
@@ -59,7 +62,11 @@ export function ChatSidePanel({ user, group }: {
 
           <div className="flex flex-col">
             <p className="font-semibold">{user.displayname}</p>
-            <p className="text-sm text-(--text-washed)">@{user.username}</p>
+            <UserTag
+              username={user.username}
+              discriminator={user.discriminator}
+              className="text-sm text-(--text-washed)"
+            />
           </div>
         </div>
 

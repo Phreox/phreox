@@ -3,24 +3,30 @@ import { Dispatch, SetStateAction, useState } from "react";
 import { statusStateData } from "../../data/status.ts";
 import { currentUser } from "../../data/users.ts";
 import { Avatar } from "../Avatar.tsx";
+import type { UserData } from "../chat/types.ts";
 
 export function ProfileCard(
-  { edit, hidden, statusState }: {
-    edit: boolean;
-    hidden: boolean;
-    statusState: [string, Dispatch<SetStateAction<string>>];
+  {
+    user = currentUser,
+    edit = false,
+    hidden = false,
+    floating = true,
+    statusState,
+  }: {
+    user?: UserData;
+    edit?: boolean;
+    hidden?: boolean;
+    floating?: boolean;
+    statusState?: [string, Dispatch<SetStateAction<string>>];
   },
 ) {
-  const [tags, setTags] = useState([
-    "Developer",
-    "Lumen IDE",
-    "Nyfplex Studios",
-  ]);
-  const [status, setStatus] = statusState;
+  const status = statusState?.[0] ?? user.status;
 
   return (
     <div
-      className={`absolute top-16 right-0 z-50 w-80 ${
+      className={`${
+        floating ? "absolute top-16 right-0 z-50" : "relative"
+      } w-80 ${
         hidden ? "hidden" : "flex"
       } flex-col gap-2 bg-(--background-surface) border border-(--border-panel) rounded-xl animate-fade-in`}
     >
@@ -29,10 +35,10 @@ export function ProfileCard(
 
       <div className="absolute top-10 left-3">
         <Avatar
-          name={currentUser.displayname}
-          seed={currentUser.id}
-          color={currentUser.color}
-          src={currentUser.profilePicture}
+          name={user.displayname}
+          seed={user.id}
+          color={user.color}
+          src={user.profilePicture}
           status={status}
           size="lg"
         />
@@ -43,30 +49,33 @@ export function ProfileCard(
 
         <div className="flex flex-col gap-2">
           <div className="flex flex-col">
-            <p>Tom</p>
+            <p>{user.displayname}</p>
 
             <p className="text-(--text-washed) text-sm">
-              @eztxmmc<span className="ml-0.5 text-xs text-(--text-dark)">
-                #1404
-              </span>
+              @{user.username}
+              {user.discriminator && (
+                <span className="ml-0.5 text-xs text-(--text-dark)">
+                  #{user.discriminator}
+                </span>
+              )}
             </p>
           </div>
 
-          <p className="text-(--text-washed) text-sm">
-            Backend-Dev, baut Hosting-Zeug und eigene Tools.
-          </p>
+          <p className="text-(--text-washed) text-sm">{user.description}</p>
 
           <div className="flex flex-wrap gap-1 text-(--text-washed)">
-            {tags &&
-              tags.map((tag) => (
-                <p className="px-2 py-1 flex items-center gap-0.5 bg-(--background-panel) border border-(--border-panel) rounded-xl text-xs">
-                  {tag}
-                </p>
-              ))}
+            {user.tags.map((tag) => (
+              <p
+                key={tag}
+                className="px-2 py-1 flex items-center gap-0.5 bg-(--background-panel) border border-(--border-panel) rounded-xl text-xs"
+              >
+                {tag}
+              </p>
+            ))}
           </div>
         </div>
 
-        {edit && (
+        {edit && statusState && (
           <div>
             <ProfileStatusChange statusState={statusState} />
             <div

@@ -1,12 +1,18 @@
 import { useSyncExternalStore } from "react";
 
-export const sectionTypes = ["spaces", "chats"] as const;
+export const sectionTypes = ["social", "spaces"] as const;
 
 type SectionType = (typeof sectionTypes)[number];
 
-const initialPath = window.location.pathname.slice(1);
+export function sectionFromPath(pathname: string) {
+  return pathname.split("/")[1] ?? "";
+}
 
-let section: SectionType = isSectionType(initialPath) ? initialPath : "chats";
+const initialSection = sectionFromPath(window.location.pathname);
+
+let section: SectionType = isSectionType(initialSection)
+  ? initialSection
+  : "social";
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {

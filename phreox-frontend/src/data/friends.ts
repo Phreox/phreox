@@ -12,3 +12,16 @@ export const friends = [
     since: "2026-08-21T09:10:00Z",
   },
 ];
+
+export const friendRequests = [
+  {
+    id: "381047562910384",
+    direction: "incoming",
+    since: "2026-10-23T19:04:00Z",
+  },
+  {
+    id: "552901837465029",
+    direction: "outgoing",
+    since: "2026-10-24T08:30:00Z",
+  },
+] as const;

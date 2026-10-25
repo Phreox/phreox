@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
-import { isSectionType, setSection } from "../data/section.ts";
+import {
+  isSectionType,
+  sectionFromPath,
+  setSection,
+} from "../data/section.ts";
 import { Header } from "./Header.tsx";
 import { MemberList } from "./RightSided.tsx";
 import { Sidebar } from "./Sidebar.tsx";
@@ -10,7 +14,7 @@ export function Layout() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const path = pathname.slice(1);
+    const path = sectionFromPath(pathname);
 
     if (isSectionType(path)) setSection(path);
   }, [pathname]);

@@ -1,10 +1,19 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
-export function Popover({ open, onClose, trigger, children }: {
+export function Popover({
+  open,
+  onClose,
+  trigger,
+  children,
+  align = "left",
+  panelClassName = "w-96",
+}: {
   open: boolean;
   onClose: () => void;
   trigger: ReactNode;
   children: ReactNode;
+  align?: "left" | "right";
+  panelClassName?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +42,7 @@ export function Popover({ open, onClose, trigger, children }: {
       {trigger}
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-3 z-20 w-96 p-2 bg-(--background-surface) border border-(--border-panel) rounded-xl shadow-lg">
+        <div className={`absolute bottom-full mb-3 z-20 ${align === "right" ? "right-0" : "left-0"} ${panelClassName} p-2 bg-(--background-surface) border border-(--border-panel) rounded-xl shadow-lg animate-fade-in`}>
           {children}
         </div>
       )}

@@ -7,6 +7,10 @@ import { Popover } from "../Popover.tsx";
 import { FileChip } from "./Files.tsx";
 import type { Draft } from "./types.ts";
 
+const composerViews = ["write", "preview"] as const;
+
+type ComposerView = (typeof composerViews)[number];
+
 export function ChatInput({ name, onSend }: {
   name?: string;
   onSend: (draft: Draft) => void;
@@ -16,6 +20,7 @@ export function ChatInput({ name, onSend }: {
   const [gif, setGif] = useState("");
   const [openPanel, setOpenPanel] = useState<"emoji" | "gif">();
   const [dragging, setDragging] = useState(false);
+  const [view, setView] = useState<ComposerView>("write");
   const fileInput = useRef<HTMLInputElement>(null);
 
   const canSend = text.trim() !== "" || files.length > 0 || gif.trim() !== "";
@@ -33,6 +38,7 @@ export function ChatInput({ name, onSend }: {
     setFiles([]);
     setGif("");
     setOpenPanel(undefined);
+    setView("write");
   }
 
   return (
@@ -49,13 +55,6 @@ export function ChatInput({ name, onSend }: {
         addFiles(event.dataTransfer.files);
       }}
     >
-      {text.trim() !== "" && (
-        <div className="px-4 py-3 flex flex-col gap-1 bg-(--background-panel) border border-(--border-panel) rounded-xl">
-          <p className="text-xs uppercase text-(--text-dark)">Vorschau</p>
-          <Markdown source={text} />
-        </div>
-      )}
-
       <div
         className={`p-3 flex flex-col gap-2 bg-(--background-dark) border-2 rounded-2xl transition-colors duration-200 ease-in-out ${
           dragging ? "border-(--text-default)" : "border-(--border-surface)"
@@ -88,21 +87,35 @@ export function ChatInput({ name, onSend }: {
           </div>
         )}
 
-        <textarea
-          rows={1}
-          className="w-full field-sizing-content min-h-6 max-h-60 resize-none text-base bg-transparent outline-none text-(--text-default) placeholder:text-(--text-dark)"
-          placeholder={dragging
-            ? "Datei hier ablegen"
-            : `Nachricht an ${name ?? "Unbekannt"}`}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              send();
-            }
-          }}
-        />
+        {view === "write"
+          ? (
+            <textarea
+              rows={1}
+              className="w-full field-sizing-content min-h-6 max-h-60 resize-none text-base bg-transparent outline-none text-(--text-default) placeholder:text-(--text-dark)"
+              placeholder={dragging
+                ? "Datei hier ablegen"
+                : `Nachricht an ${name ?? "Unbekannt"}`}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  send();
+                }
+              }}
+            />
+          )
+          : (
+            <div className="min-h-6 max-h-60 overflow-y-auto text-base text-(--text-washed)">
+              {text.trim() !== ""
+                ? <Markdown source={text} />
+                : (
+                  <p className="text-(--text-dark)">
+                    Nichts zum Anzeigen
+                  </p>
+                )}
+            </div>
+          )}
 
         <div className="flex items-center gap-1 text-(--text-washed)">
           <IconButton
@@ -158,6 +171,31 @@ export function ChatInput({ name, onSend }: {
           </Popover>
 
           <div className="flex-1" />
+
+          <div className="relative w-48 p-1 flex gap-1 bg-(--background-surface) rounded-xl">
+            <div
+              className={`absolute top-1 bottom-1 left-1 w-[calc(50%-0.375rem)] bg-(--background-panel) border border-(--border-panel) rounded-xl transition-transform duration-200 ease-in-out ${
+                view === "preview"
+                  ? "translate-x-[calc(100%+0.25rem)]"
+                  : "translate-x-0"
+              }`}
+            />
+
+            {composerViews.map((composerView) => (
+              <button
+                key={composerView}
+                type="button"
+                className={`relative flex-1 py-0.5 flex justify-center items-center rounded-xl text-sm cursor-pointer transition-colors duration-200 ease-in-out ${
+                  view === composerView
+                    ? "text-(--text-default)"
+                    : "text-(--text-washed) hover:text-(--text-default)"
+                }`}
+                onClick={() => setView(composerView)}
+              >
+                {composerView === "write" ? "Schreiben" : "Vorschau"}
+              </button>
+            ))}
+          </div>
 
           <IconButton
             icon="material-symbols:send-rounded"

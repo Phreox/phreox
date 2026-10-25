@@ -2,6 +2,7 @@ export const users = [
   {
     id: "234892340923049",
     username: "syntaxjason",
+    discriminator: "2210",
     displayname: "Jason",
     profilePicture: null,
     color: "#8c7a9e",
@@ -12,6 +13,7 @@ export const users = [
   {
     id: "918273645120394",
     username: "pixelmara",
+    discriminator: "0817",
     displayname: "Mara",
     profilePicture: null,
     color: "#9aa88a",
@@ -22,6 +24,7 @@ export const users = [
   {
     id: "552901837465029",
     username: "rustnils",
+    discriminator: "5530",
     displayname: "Nils",
     profilePicture: null,
     color: "#8a9bab",
@@ -32,6 +35,7 @@ export const users = [
   {
     id: "670128934571802",
     username: "devlena",
+    discriminator: "7741",
     displayname: "Lena",
     profilePicture: null,
     color: "#b08f8a",
@@ -42,6 +46,7 @@ export const users = [
   {
     id: "381047562910384",
     username: "kernel_ben",
+    discriminator: "3302",
     displayname: "Ben",
     profilePicture: null,
     color: "#7f9e96",
@@ -52,6 +57,7 @@ export const users = [
   {
     id: "947162503847561",
     username: "nightowl_ada",
+    discriminator: "9064",
     displayname: "Ada",
     profilePicture: null,
     color: "#a39a7e",
@@ -64,8 +70,11 @@ export const users = [
 export const currentUser = {
   id: "100000000000000",
   username: "eztxmmc",
+  discriminator: "1404",
   displayname: "Tom",
   profilePicture: null,
   color: "#9aa88a",
   status: "Online",
+  description: "Backend-Dev, baut Hosting-Zeug und eigene Tools.",
+  tags: ["Developer", "Lumen IDE", "Nyfplex Studios"],
 };
