@@ -1,27 +1,27 @@
 [submodule "docs"]
 	path = docs
-	url = https://github.com/Phreox/phreox-docs.git
+	url = https://github.com/Phreox/docs.git
 [submodule "phreox-api"]
 	path = phreox-api
-	url = https://github.com/Phreox/phreox-api.git
+	url = https://github.com/Phreox/api.git
 [submodule "phreox-app"]
 	path = phreox-app
-	url = https://github.com/Phreox/phreox-app.git
+	url = https://github.com/Phreox/app.git
 [submodule "phreox-backend"]
 	path = phreox-backend
-	url = https://github.com/Phreox/phreox-backend.git
+	url = https://github.com/Phreox/backend.git
 [submodule "phreox-frontend"]
 	path = phreox-frontend
-	url = https://github.com/Phreox/phreox-frontend.git
+	url = https://github.com/Phreox/frontend.git
 [submodule "phreox-presence"]
 	path = phreox-presence
-	url = https://github.com/Phreox/phreox-presence.git
+	url = https://github.com/Phreox/presence.git
 [submodule "phreox-server-common"]
 	path = phreox-server-common
-	url = https://github.com/Phreox/phreox-server-common.git
+	url = https://github.com/Phreox/server-common.git
 [submodule "phreox-service"]
 	path = phreox-service
-	url = https://github.com/Phreox/phreox-service.git
+	url = https://github.com/Phreox/service.git
 [submodule "phreox-space"]
 	path = phreox-space
-	url = https://github.com/Phreox/phreox-space.git
+	url = https://github.com/Phreox/space.git
