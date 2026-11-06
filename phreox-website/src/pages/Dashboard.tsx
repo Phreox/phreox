@@ -163,14 +163,15 @@ function AccountsTab({ me }: { me: Me }) {
             {roles.value?.length === 0 && <span className="text-xs text-(--text-dark)">{t("dash.roles.none")}</span>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* An older service does not know the badges of the team yet: then there is nothing to show. */}
+          {(catalog.value?.badges ?? []).length > 0 && <div className="flex flex-wrap items-center gap-2">
             <span className="w-14 text-xs text-(--text-dark)">{t("dash.acc.badges")}</span>
-            {catalog.value?.badges.map((badge) => (
-              <Chip key={badge} on={row.badges.includes(badge)} onClick={() => void run(async () => { await call(row.badges.includes(badge) ? "DELETE" : "PUT", `/admin/accounts/${row.id}/badges/${badge}`); rows.reload(); })}>
+            {(catalog.value?.badges ?? []).map((badge) => (
+              <Chip key={badge} on={(row.badges ?? []).includes(badge)} onClick={() => void run(async () => { await call((row.badges ?? []).includes(badge) ? "DELETE" : "PUT", `/admin/accounts/${row.id}/badges/${badge}`); rows.reload(); })}>
                 {t(`badge.${badge}` as TextKey)}
               </Chip>
             ))}
-          </div>
+          </div>}
         </Card>
       ))}
     </div>
