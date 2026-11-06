@@ -21,7 +21,8 @@ function plainEmoji(): Plugin {
 
 export default defineConfig({
   plugins: [plainEmoji(), react(), tailwindcss()],
-  resolve: { alias: { "@app": app } },
+  // One copy of React: the Markdown component of the app must use the React of the website, or its hooks would not work.
+  resolve: { alias: { "@app": app }, dedupe: ["react", "react-dom"] },
   server: {
     fs: { allow: [path.resolve(import.meta.dirname, "..")] },
     // `npm run dev` next to `npm run serve` (port 8080): the pages call the same paths as in production.
