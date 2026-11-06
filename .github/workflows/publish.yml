@@ -99,8 +99,8 @@ jobs:
         run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
       - name: Install
         run: |
-          npm --prefix phreox-frontend ci
-          npm --prefix phreox-app install --no-audit --no-fund
+          (cd phreox-frontend && npm ci)
+          (cd phreox-app && npm install --no-audit --no-fund)
       - name: Package
         working-directory: phreox-app
         run: npm run package:desktop
@@ -136,9 +136,8 @@ jobs:
         run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
       - name: Build the web part
         run: |
-          npm --prefix phreox-frontend ci
-          npm --prefix phreox-app install --no-audit --no-fund
-          npm --prefix phreox-app run sync:android
+          (cd phreox-frontend && npm ci)
+          (cd phreox-app && npm install --no-audit --no-fund && npm run sync:android)
       - name: Signing key
         id: key
         run: |
@@ -168,8 +167,36 @@ jobs:
           if-no-files-found: error
           path: phreox-app/android/phreox-*.apk
 
+  service:
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: phreox-service.jar
+        run: |
+          mvn -B -q -pl phreox-service -am -DskipTests package
+          mkdir -p out
+          # The Pterodactyl egg and its supervisor take this file: phreox-service-<channel>-<version>.jar
+          cp phreox-service/target/phreox-service.jar "out/phreox-service-${{ needs.plan.outputs.channel }}-${{ needs.plan.outputs.version }}.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service
+          if-no-files-found: error
+          path: out/phreox-service-*.jar
+
   publish:
-    needs: [plan, desktop, android]
+    needs: [plan, desktop, android, service]
     runs-on: ubuntu-latest
     # A dev release replaces the previous one: only the newest commit may publish, an older run is cancelled by a newer one.
     concurrency:
