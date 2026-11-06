@@ -1,28 +1,39 @@
 @import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque/wdth.css";
+@import "@fontsource-variable/instrument-sans/index.css";
+
+@theme {
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
 
 @layer base {
   :root {
     color-scheme: dark;
 
-    --app-bg: #07080e;
-    --background-overlay: #12131d;
-    --background-darkend: #07080e;
+    /* Ink and the violet of the headphones in the logo, Volt for the one thing that is about energy. */
+    --ink: #0b0b12;
+    --night: #13131d;
+    --violet: #835afc;
+    --violet-deep: #5b34d6;
+    --lilac: #c9b9ff;
+    --paper: #f4f0ff;
+    --volt: #ffd84a;
+
+    /* The theme of the app, so that the pictures of the app on this site look like the app. */
+    --app-bg: #0b0b12;
+    --background-darkend: #08090f;
     --background-dark: #0d0e16;
     --background-surface: #12131d;
     --background-panel: #1a1b29;
     --background-raised: #242639;
-
     --border-dark: #181a27;
     --border-surface: #22243a;
     --border-panel: #2f3250;
     --border-raised: #444a78;
-
     --brand: #835afc;
     --brand-hover: #9370ff;
     --accent: #b39cff;
-    --pink: #ff6bb3;
-    --cyan: #5fd4ff;
-
     --text-default: #f3f3f9;
     --text-washed: #c2c4d6;
     --text-dark: #8e91aa;
@@ -34,78 +45,75 @@
 
   body {
     min-height: 100dvh;
-    background: var(--app-bg);
+    background: var(--ink);
     color: var(--text-default);
-    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-family: var(--font-sans);
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
-  ::selection { background: color-mix(in srgb, var(--brand) 55%, transparent); }
+  ::selection { background: var(--volt); color: var(--ink); }
+
+  :focus-visible { outline: 3px solid var(--volt); outline-offset: 3px; border-radius: 6px; }
 
   a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 @layer components {
-  .gradient-text {
-    background-image: linear-gradient(100deg, #fff 0%, var(--accent) 35%, var(--pink) 70%, var(--cyan) 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shimmer 9s linear infinite;
-  }
-
-  .glass {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.02));
-    border: 1px solid rgb(255 255 255 / 0.08);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+  /* The headlines: heavy, narrow, tight. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-stretch: 80%;
+    letter-spacing: -0.012em;
+    line-height: 0.95;
+    text-wrap: balance;
   }
 
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    padding: 0.8rem 1.4rem; border-radius: 999px; font-weight: 600; cursor: pointer;
-    transition: transform 200ms ease, background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+    padding: 0.85rem 1.5rem; border-radius: 1rem; font-weight: 650; font-size: 1rem; cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
   }
   .btn:hover { transform: translateY(-2px); }
   .btn:active { transform: translateY(0); }
-  .btn-primary { background: linear-gradient(135deg, var(--brand), #b04dff); color: #fff; box-shadow: 0 10px 40px -10px rgb(131 90 252 / 0.8); }
-  .btn-primary:hover { box-shadow: 0 14px 50px -8px rgb(131 90 252 / 0.95); }
-  .btn-ghost { background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.12); color: var(--text-default); }
-  .btn-ghost:hover { background: rgb(255 255 255 / 0.11); }
-  .btn-small { padding: 0.45rem 0.9rem; font-size: 0.875rem; }
+  .btn-primary { background: var(--violet); color: #fff; box-shadow: 0 6px 0 var(--violet-deep); }
+  .btn-primary:hover { background: #9370ff; }
+  .btn-primary:active { box-shadow: 0 2px 0 var(--violet-deep); transform: translateY(4px); }
+  .btn-ghost { background: rgb(255 255 255 / 0.07); color: var(--text-default); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.16); }
+  .btn-ghost:hover { background: rgb(255 255 255 / 0.13); }
+  .btn-light { background: #fff; color: var(--ink); box-shadow: 0 6px 0 rgb(0 0 0 / 0.25); }
+  .btn-ink { background: var(--ink); color: #fff; box-shadow: 0 6px 0 rgb(0 0 0 / 0.35); }
+  .btn-small { padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 0.8rem; box-shadow: none; }
+  .btn-small.btn-primary { box-shadow: 0 3px 0 var(--violet-deep); }
 
   .field {
     width: 100%; padding: 0.65rem 0.9rem; border-radius: 0.8rem; outline: none;
     background: var(--background-dark); border: 1px solid var(--border-surface); color: var(--text-default);
-    transition: border-color 200ms ease;
+    transition: border-color 160ms ease;
   }
-  .field:focus { border-color: var(--brand); }
+  .field:focus { border-color: var(--violet); }
 
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 700ms ease, transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1); }
-  .reveal.visible { opacity: 1; transform: none; }
+  /* The dashboard keeps these names: a plain surface of the app, no glass. */
+  .glass { background: var(--background-surface); border: 1px solid var(--border-surface); }
+  .gradient-text { color: var(--volt); }
+  .reveal { opacity: 1; }
 }
 
-@keyframes shimmer { to { background-position: 200% center; } }
-@keyframes drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  33% { transform: translate3d(4%, -6%, 0) scale(1.08); }
-  66% { transform: translate3d(-5%, 5%, 0) scale(0.96); }
-}
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(95 212 255 / 0.55); } 100% { box-shadow: 0 0 0 14px rgb(95 212 255 / 0); } }
+/* A sound ripple: rings that leave the middle. The one motif of the site. */
+@keyframes ripple { from { transform: scale(0.35); opacity: 0.9; } to { transform: scale(1); opacity: 0; } }
+@keyframes arrive { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes speak { 0%, 100% { box-shadow: 0 0 0 2px var(--volt); } 50% { box-shadow: 0 0 0 5px rgb(255 216 74 / 0.35); } }
+@keyframes bars { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 
-.aurora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.aurora span { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.55; animation: drift 24s ease-in-out infinite; }
-.grid-bg {
-  position: absolute; inset: 0; pointer-events: none;
-  background-image: linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
-}
+.ripple-ring { transform-origin: center; animation: ripple 6s ease-out infinite; }
+.arrive { opacity: 0; animation: arrive 500ms ease forwards; }
+.speaking { animation: speak 1.4s ease-in-out infinite; }
+.bar { transform-origin: bottom; animation: bars 0.9s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-  .reveal { opacity: 1; transform: none; }
+  .arrive { opacity: 1; }
+  .ripple-ring { opacity: 0.25; }
 }

@@ -1,76 +1,40 @@
 import { Link } from "react-router";
 import { call, type NewsPost, useLoad } from "../api.ts";
 import { Icon, type IconName } from "../components/Icons.tsx";
-import { Reveal } from "../components/Reveal.tsx";
+import { AppWindow, Ripples, RolesMock, VoiceMock, VoltMock } from "../components/Mock.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
-const features: { icon: IconName; title: TextKey; text: TextKey; span: string; tint: string }[] = [
-  { icon: "spaces", title: "f.spaces.title", text: "f.spaces.text", span: "md:col-span-2", tint: "from-[#835afc]/30" },
-  { icon: "roles", title: "f.roles.title", text: "f.roles.text", span: "", tint: "from-[#ff6bb3]/25" },
-  { icon: "voice", title: "f.voice.title", text: "f.voice.text", span: "", tint: "from-[#5fd4ff]/25" },
-  { icon: "chat", title: "f.chat.title", text: "f.chat.text", span: "md:col-span-2", tint: "from-[#b39cff]/25" },
-  { icon: "bolt", title: "f.ember.title", text: "f.ember.text", span: "", tint: "from-[#ffb86b]/25" },
-  { icon: "open", title: "f.open.title", text: "f.open.text", span: "md:col-span-2", tint: "from-[#38b6a8]/25" },
-];
+const tones = {
+  violet: "bg-(--violet) text-white",
+  paper: "bg-(--paper) text-(--ink)",
+  night: "bg-(--night) text-white ring-1 ring-white/8",
+  volt: "bg-(--volt) text-(--ink)",
+} as const;
 
-/** The app, drawn with boxes: spaces on the left, channels, a chat and a voice channel. */
-function AppMock() {
-  const spaces = ["#835afc", "#ff6bb3", "#5fd4ff", "#ffb86b"];
-  const lines = [
-    { who: "Lena", color: "#ff6bb3", text: "Das neue Banner sieht mega aus 🔥" },
-    { who: "Jonas", color: "#5fd4ff", text: "Hab die Rollen sortiert, Verläufe sind drin" },
-    { who: "Mira", color: "#b39cff", text: "Wer ist gleich im Voice? **Release-Party** 🎉" },
-  ];
+/** One big panel: a heading with its explanation on one side and a picture of the app on the other. */
+function Stage({ tone, title, text, points = [], flip = false, children }: { tone: keyof typeof tones; title: TextKey; text: TextKey; points?: TextKey[]; flip?: boolean; children: React.ReactNode }) {
+  const { t } = useT();
 
   return (
-    <div className="relative mx-auto mt-16 max-w-4xl" style={{ perspective: "1600px" }}>
-      <div className="absolute -inset-6 rounded-[2rem] bg-linear-to-r from-[#835afc]/40 via-[#ff6bb3]/25 to-[#5fd4ff]/30 blur-3xl" />
+    <section className={`relative overflow-hidden rounded-[2rem] p-6 sm:rounded-[2.75rem] sm:p-10 lg:p-14 ${tones[tone]}`}>
+      {tone === "night" && <Ripples className="pointer-events-none absolute -right-52 -bottom-52 w-[44rem] opacity-70" color="var(--volt)" />}
 
-      <div className="glass relative rounded-3xl overflow-hidden shadow-2xl shadow-black/60 flex h-[22rem] sm:h-[26rem]" style={{ transform: "rotateX(6deg)", transformOrigin: "center top" }}>
-        <div className="w-14 sm:w-16 shrink-0 bg-black/30 flex flex-col items-center gap-3 py-4">
-          {spaces.map((color, index) => (
-            <span key={color} className={`size-9 sm:size-10 rounded-2xl grid place-items-center font-bold text-sm ${index === 0 ? "ring-2 ring-white/70" : "opacity-80"}`} style={{ background: color }}>{"BPNZ"[index]}</span>
-          ))}
+      <div className="relative grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className={flip ? "lg:order-2" : ""}>
+          <h2 className="display text-[clamp(2.4rem,5.5vw,4.5rem)]">{t(title)}</h2>
+          <p className="mt-5 max-w-[34rem] text-lg opacity-90">{t(text)}</p>
+          {points.length > 0 && (
+            <ul className="mt-6 flex flex-col gap-2.5">
+              {points.map((point) => (
+                <li key={point} className="flex items-start gap-3"><Icon name="check" className="mt-1 size-4 shrink-0" />{t(point)}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <div className="hidden sm:flex w-52 shrink-0 flex-col bg-black/20 p-3 gap-1 text-sm">
-          <div className="h-20 -mx-3 -mt-3 mb-2 bg-linear-to-br from-[#835afc] to-[#ff6bb3] relative">
-            <span className="absolute bottom-2 left-3 font-semibold">BlueNet</span>
-          </div>
-          {["willkommen", "ankündigungen", "allgemein", "projekte"].map((name, index) => (
-            <span key={name} className={`px-2 py-1.5 rounded-lg text-(--text-washed) ${index === 2 ? "bg-white/10 text-white" : ""}`}># {name}</span>
-          ))}
-          <span className="px-2 pt-3 text-xs uppercase tracking-wider text-(--text-dark)">Voice</span>
-          <span className="px-2 py-1.5 rounded-lg text-(--text-washed) flex items-center gap-2"><Icon name="voice" className="size-4" /> Lounge</span>
-          <div className="flex -space-x-2 px-2">
-            {["#ff6bb3", "#5fd4ff", "#ffb86b"].map((color) => <span key={color} className="size-6 rounded-full border-2 border-(--background-dark)" style={{ background: color, animation: "pulse-ring 2s ease-out infinite" }} />)}
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="h-12 shrink-0 px-4 flex items-center border-b border-white/5 text-sm font-semibold"># allgemein</div>
-          <div className="flex-1 p-4 flex flex-col gap-4 justify-end overflow-hidden">
-            {lines.map((line) => (
-              <div key={line.who} className="flex gap-3 items-start">
-                <span className="size-9 rounded-full shrink-0" style={{ background: line.color }} />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: line.color }}>{line.who} <span className="text-xs text-(--text-dark) font-normal">heute</span></p>
-                  <p className="text-sm text-(--text-washed)">{line.text}</p>
-                </div>
-              </div>
-            ))}
-            <div className="h-11 rounded-xl bg-white/6 border border-white/8 px-4 flex items-center text-sm text-(--text-dark)">Nachricht an #allgemein</div>
-          </div>
-        </div>
+        <div className={flip ? "lg:order-1" : ""}>{children}</div>
       </div>
-
-      <span className="glass absolute -left-3 sm:-left-10 top-16 rounded-2xl px-4 py-2.5 text-sm flex items-center gap-2" style={{ animation: "float 6s ease-in-out infinite" }}>
-        <span className="size-2.5 rounded-full bg-emerald-400" /> 3 im Voice
-      </span>
-      <span className="glass absolute -right-2 sm:-right-8 bottom-20 rounded-2xl px-4 py-2.5 text-sm flex items-center gap-2" style={{ animation: "float 7s ease-in-out -2s infinite" }}>
-        <Icon name="bolt" className="size-4 text-amber-300" /> Stufe 3 erreicht
-      </span>
-    </div>
+    </section>
   );
 }
 
@@ -82,99 +46,157 @@ function Latest() {
   if (posts.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-6xl px-4 mt-32">
-      <Reveal className="flex items-end justify-between gap-4 mb-8">
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">{t("news.latest")}</h2>
-        <Link to="/news" className="text-sm text-(--accent) hover:underline">{t("news.more")} →</Link>
-      </Reveal>
-
-      <div className="grid md:grid-cols-3 gap-4">
-        {posts.map((post, index) => (
-          <Reveal key={post.id} delay={index * 90}>
-            <Link to={`/news/${post.id}`} className="glass rounded-3xl p-6 flex flex-col gap-3 h-full transition-transform hover:-translate-y-1">
-              <span className="text-xs text-(--accent)">{t(`cat.${post.category}` as TextKey)} · {new Date(post.createdAt).toLocaleDateString(lang)}</span>
-              <h3 className="text-lg font-semibold">{post.title}</h3>
-              <p className="text-sm text-(--text-washed) line-clamp-3">{post.body.replace(/[*_~`>|#]/g, "")}</p>
-            </Link>
-          </Reveal>
-        ))}
+    <section className="mx-auto mt-28 max-w-6xl px-5">
+      <div className="flex items-end justify-between gap-4">
+        <h2 className="display text-[clamp(2.2rem,5vw,3.75rem)]">{t("news.latest")}</h2>
+        <Link to="/news" className="font-semibold text-(--lilac) hover:underline">{t("news.more")}</Link>
       </div>
+
+      <ul className="mt-8 divide-y divide-white/10 border-y border-white/10">
+        {posts.map((post) => (
+          <li key={post.id}>
+            <Link to={`/news/${post.id}`} className="group grid gap-1 py-6 sm:grid-cols-[10rem_1fr] sm:gap-8">
+              <time className="text-sm text-(--text-dark) sm:pt-1.5" dateTime={new Date(post.createdAt).toISOString()}>{new Date(post.createdAt).toLocaleDateString(lang, { day: "numeric", month: "long", year: "numeric" })}</time>
+              <span>
+                <span className="display block text-2xl transition-colors group-hover:text-(--lilac) sm:text-3xl">{post.title}</span>
+                <span className="mt-2 block max-w-2xl text-(--text-washed) line-clamp-2">{post.body.replace(/[*_~`>|#]/g, "")}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
+
+const places: { icon: IconName; name: TextKey | "browser"; to: string }[] = [
+  { icon: "windows", name: "platform.windows", to: "/download" },
+  { icon: "macos", name: "platform.macos", to: "/download" },
+  { icon: "linux", name: "platform.linux", to: "/download" },
+  { icon: "android", name: "platform.android", to: "/download" },
+  { icon: "globe", name: "browser", to: "https://phreox.talk" },
+];
 
 export function Home() {
   const { t } = useT();
 
   return (
     <>
-      <section className="relative">
-        <div className="aurora">
-          <span className="top-[-10%] left-[8%] size-[34rem] bg-[#835afc]" />
-          <span className="top-[10%] right-[4%] size-[28rem] bg-[#ff6bb3]/70" style={{ animationDelay: "-8s" }} />
-          <span className="top-[40%] left-[40%] size-[24rem] bg-[#5fd4ff]/50" style={{ animationDelay: "-15s" }} />
-        </div>
-        <div className="grid-bg" />
+      <section className="relative overflow-hidden">
+        <Ripples className="pointer-events-none absolute -top-72 -right-72 w-[60rem] opacity-60 sm:-right-56" />
 
-        <div className="relative mx-auto max-w-6xl px-4 pt-20 sm:pt-28 pb-8 text-center">
-          <Reveal>
-            <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-(--text-washed)">
-              <span className="size-2 rounded-full bg-(--cyan) animate-pulse" /> {t("hero.badge")}
-            </span>
-          </Reveal>
+        <div className="relative mx-auto max-w-6xl px-5 pt-14 sm:pt-24">
+          <h1 className="display text-[clamp(3.6rem,11vw,9rem)]">
+            {t("hero.title1")}<br /><span className="text-(--lilac)">{t("hero.title2")}</span>
+          </h1>
 
-          <Reveal delay={80}>
-            <h1 className="mt-8 text-5xl sm:text-7xl lg:text-8xl font-extrabold tracking-tighter leading-[1.02]">
-              {t("hero.title1")}<br /><span className="gradient-text">{t("hero.title2")}</span>
-            </h1>
-          </Reveal>
+          <p className="mt-8 max-w-xl text-lg text-(--text-washed) sm:text-xl">{t("hero.text")}</p>
 
-          <Reveal delay={160}>
-            <p className="mx-auto mt-7 max-w-2xl text-lg sm:text-xl text-(--text-washed)">{t("hero.text")}</p>
-          </Reveal>
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <a href="https://phreox.talk" className="btn btn-primary text-lg">{t("hero.cta")}<Icon name="arrow" className="size-5" /></a>
+            <Link to="/download" className="btn btn-ghost text-lg"><Icon name="download" className="size-5" />{t("hero.ctaDownload")}</Link>
+          </div>
+          <p className="mt-4 text-sm text-(--text-dark)">{t("hero.note")}</p>
 
-          <Reveal delay={240} className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/download" className="btn btn-primary text-base"><Icon name="download" /> {t("hero.cta")}</Link>
-            <a href="https://phreox.talk" className="btn btn-ghost text-base"><Icon name="globe" /> {t("hero.ctaApp")}</a>
-          </Reveal>
-
-          <Reveal delay={300}><p className="mt-5 text-sm text-(--text-dark)">{t("hero.platforms")}</p></Reveal>
-
-          <Reveal delay={360}><AppMock /></Reveal>
+          <div className="mt-14"><AppWindow /></div>
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-6xl px-4 mt-32">
-        <Reveal className="text-center max-w-2xl mx-auto">
-          <p className="text-sm font-semibold uppercase tracking-widest text-(--accent)">{t("features.kicker")}</p>
-          <h2 className="mt-3 text-3xl sm:text-5xl font-bold tracking-tight">{t("features.title")}</h2>
-        </Reveal>
+      <div className="mx-auto mt-28 flex max-w-6xl flex-col gap-6 px-5">
+        <Stage tone="violet" title="spaces.title" text="spaces.text" points={["spaces.p1", "spaces.p2", "spaces.p3"]}>
+          <SpacesPicture />
+        </Stage>
 
-        <div className="mt-14 grid md:grid-cols-3 gap-4">
-          {features.map((feature, index) => (
-            <Reveal key={feature.title} delay={(index % 3) * 80} className={feature.span}>
-              <article className={`glass relative overflow-hidden rounded-3xl p-7 h-full transition-transform duration-300 hover:-translate-y-1 bg-linear-to-br ${feature.tint} to-transparent`}>
-                <span className="size-12 rounded-2xl bg-white/10 grid place-items-center text-white"><Icon name={feature.icon} className="size-6" /></span>
-                <h3 className="mt-6 text-xl font-semibold tracking-tight">{t(feature.title)}</h3>
-                <p className="mt-2 text-(--text-washed)">{t(feature.text)}</p>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+        <Stage tone="paper" title="roles.title" text="roles.text" points={["roles.free"]} flip>
+          <RolesMock />
+        </Stage>
+
+        <Stage tone="night" title="voice.title" text="voice.text" points={["voice.p1", "voice.p2"]}>
+          <VoiceMock />
+        </Stage>
+
+        <Stage tone="volt" title="volt.title" text="volt.text" flip>
+          <VoltMock />
+        </Stage>
+      </div>
 
       <Latest />
 
-      <Reveal className="mx-auto max-w-6xl px-4 mt-32">
-        <div className="relative overflow-hidden rounded-[2rem] p-10 sm:p-16 text-center bg-linear-to-br from-[#835afc] via-[#a24df0] to-[#ff6bb3]">
-          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, #fff 0, transparent 40%), radial-gradient(circle at 80% 80%, #5fd4ff 0, transparent 40%)" }} />
-          <div className="relative">
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">{t("download.title")}</h2>
-            <p className="mt-4 text-white/85 max-w-xl mx-auto">{t("download.text")}</p>
-            <Link to="/download" className="btn mt-8 bg-white text-[#2a1766] text-base"><Icon name="download" /> {t("hero.cta")}</Link>
+      <section className="mx-auto mt-28 grid max-w-6xl gap-10 px-5 lg:grid-cols-2 lg:gap-16">
+        <div>
+          <h2 className="display text-[clamp(2.4rem,5.5vw,4.5rem)]">{t("where.title")}</h2>
+          <p className="mt-5 max-w-[34rem] text-lg text-(--text-washed)">{t("where.text")}</p>
+        </div>
+
+        <ul className="divide-y divide-white/10 border-y border-white/10">
+          {places.map((place) => {
+            const inner = (
+              <>
+                <Icon name={place.icon} className="size-6 text-(--lilac)" />
+                <span className="display flex-1 text-2xl">{place.name === "browser" ? t("nav.openApp") : t(place.name)}</span>
+                <Icon name="arrow" className="size-5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </>
+            );
+
+            return (
+              <li key={place.name}>
+                {place.to.startsWith("http")
+                  ? <a href={place.to} className="group flex items-center gap-4 py-4">{inner}</a>
+                  : <Link to={place.to} className="group flex items-center gap-4 py-4">{inner}</Link>}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="mx-auto mt-28 max-w-6xl px-5">
+        <div className="relative overflow-hidden rounded-[2rem] bg-(--violet) p-8 sm:rounded-[3rem] sm:p-16">
+          <Ripples className="pointer-events-none absolute -right-40 top-1/2 w-[40rem] -translate-y-1/2 opacity-60" color="#fff" />
+
+          <div className="relative flex flex-col items-start gap-8 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="display text-[clamp(3rem,8vw,6.5rem)] text-white">{t("cta.title")}</h2>
+              <p className="mt-4 max-w-md text-lg text-white/85">{t("cta.text")}</p>
+              <a href="https://phreox.talk" className="btn btn-light mt-8 text-lg">{t("hero.cta")}<Icon name="arrow" className="size-5" /></a>
+            </div>
+            <img src="/phreox-logo.png" alt="" className="size-28 -rotate-6 rounded-[1.75rem] shadow-[0_20px_50px_-10px_rgb(0_0_0/0.5)] sm:size-44 sm:rounded-[2.5rem]" />
           </div>
         </div>
-      </Reveal>
+      </section>
     </>
+  );
+}
+
+/** The channels of a space as a picture: categories, text and voice, a drag handle and the invite link. */
+function SpacesPicture() {
+  const rows: { icon: IconName; name: string; hint?: string }[][] = [
+    [{ icon: "megaphone", name: "willkommen" }, { icon: "hash", name: "regeln" }],
+    [{ icon: "hash", name: "allgemein" }, { icon: "hash", name: "projekte" }, { icon: "hash", name: "memes" }],
+    [{ icon: "speaker", name: "Lounge", hint: "2" }, { icon: "speaker", name: "Zocken" }],
+  ];
+  const groups = ["Willkommen", "Chat", "Voice"];
+
+  return (
+    <div role="img" aria-label="Phreox: Channels in Kategorien" className="overflow-hidden rounded-3xl border border-(--border-panel) bg-(--background-dark) text-sm text-(--text-default) shadow-[0_40px_90px_-30px_rgb(0_0_0/0.6)]">
+      <div className="flex h-28 items-end justify-between p-4" style={{ background: "linear-gradient(135deg, #5b34d6, #ff7a90)" }}>
+        <span className="display text-3xl">BlueNet</span>
+        <span className="rounded-lg bg-black/35 px-2.5 py-1 text-xs">phreox.talk/bluenet</span>
+      </div>
+
+      <div className="flex flex-col gap-4 p-4">
+        {rows.map((items, index) => (
+          <div key={groups[index]} className="flex flex-col gap-0.5">
+            <p className="px-2 pb-1 text-xs font-semibold text-(--text-dark)">{groups[index]}</p>
+            {items.map((item) => (
+              <p key={item.name} className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 ${item.name === "projekte" ? "bg-(--background-raised) shadow-lg ring-1 ring-(--violet)" : "text-(--text-washed)"}`}>
+                <span className="text-(--text-dark)" aria-hidden="true">⠿</span>
+                <Icon name={item.icon} className="size-4 opacity-70" />{item.name}
+                {item.hint && <span className="ml-auto rounded-full bg-(--background-raised) px-2 text-xs">{item.hint}</span>}
+              </p>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

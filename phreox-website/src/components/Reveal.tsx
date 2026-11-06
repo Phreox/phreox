@@ -1,25 +1,6 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
-/** Fades its content in as it scrolls into view. */
-export function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  const element = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const node = element.current;
-
-    if (!node) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry?.isIntersecting) return;
-
-      node.classList.add("visible");
-      observer.disconnect();
-    }, { threshold: 0.12 });
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, []);
-
-  return <div ref={element} className={`reveal ${className}`} style={{ transitionDelay: `${delay}ms` }}>{children}</div>;
+/** The pages used to fade in section by section; they do not any more. This keeps the old call sites (the dashboard) as plain boxes. */
+export function Reveal({ children, className = "" }: { children: ReactNode; className?: string; delay?: number }) {
+  return <div className={className}>{children}</div>;
 }
