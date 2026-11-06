@@ -13,7 +13,7 @@
     "Java 25": "ghcr.io/pterodactyl/yolks:java_25"
   },
   "file_denylist": [],
-  "startup": "java -cp supervisor.jar talk.phreox.service.supervisor.Supervisor",
+  "startup": "java -XX:+UseSerialGC -Xms8m -Xmx32m -Xss256k -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -XX:-UsePerfData -XX:ReservedCodeCacheSize=16m -XX:MaxMetaspaceSize=64m -cp supervisor.jar talk.phreox.service.supervisor.Supervisor",
   "config": {
     "files": "{}",
     "startup": "{\"done\": \"Phreox supervisor: service is up\"}",
@@ -100,9 +100,9 @@
     },
     {
       "name": "Java options",
-      "description": "Options of the JVM that runs the service. ZGC keeps pauses short.",
+      "description": "Options of the JVM that runs the service. The default keeps it small: serial collector, 192 MB heap at most, one compiler thread.",
       "env_variable": "PHREOX_JAVA_OPTS",
-      "default_value": "-XX:+UseZGC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError",
+      "default_value": "-XX:+UseSerialGC -Xms16m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=24m -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -XX:-UsePerfData -XX:+ExitOnOutOfMemoryError",
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|string|max:255",

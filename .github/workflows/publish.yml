@@ -158,7 +158,7 @@ jobs:
         run: |
           # The version code grows with every build, so a newer build can always be installed over an older one.
           ./gradlew --no-daemon assembleRelease \
-            -PphreoxApplicationId="$PHREOX_APP_ID" -PphreoxAppName="$PHREOX_APP_NAME" \
+            -PphreoxApplicationId="$PHREOX_APP_ID" -PphreoxAppName="$PHREOX_APP_NAME" -PphreoxScheme="$PHREOX_SCHEME" \
             -PphreoxVersionName="${{ needs.plan.outputs.version }}" -PphreoxVersionCode="${{ github.run_number }}" \
             -PphreoxKeystore="$RUNNER_TEMP/phreox.jks" -PphreoxKeystorePassword="$STORE_PASSWORD" -PphreoxKeyAlias="$KEY_ALIAS"
           mv app/build/outputs/apk/release/app-release.apk \

@@ -24,7 +24,8 @@ egg = {
     "features": None,
     "docker_images": {"Java 25": "ghcr.io/pterodactyl/yolks:java_25"},
     "file_denylist": [],
-    "startup": "java -cp supervisor.jar talk.phreox.service.supervisor.Supervisor",
+    # The supervisor only waits and asks GitHub: it gets a tiny JVM of its own, the service a small one (see PHREOX_JAVA_OPTS).
+    "startup": "java -XX:+UseSerialGC -Xms8m -Xmx32m -Xss256k -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -XX:-UsePerfData -XX:ReservedCodeCacheSize=16m -XX:MaxMetaspaceSize=64m -cp supervisor.jar talk.phreox.service.supervisor.Supervisor",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox supervisor: service is up"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": script, "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
@@ -42,8 +43,8 @@ egg = {
                  "PHREOX_SERVICE_RESERVED_DOMAINS", "phreox.talk", "nullable|string|max:255"),
         variable("Klipy key", "Klipy app key for the GIF search. Without it the service offers no GIFs.",
                  "PHREOX_KLIPY_KEY", "", "nullable|string|max:255", False),
-        variable("Java options", "Options of the JVM that runs the service. ZGC keeps pauses short.",
-                 "PHREOX_JAVA_OPTS", "-XX:+UseZGC -XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError", "required|string|max:255"),
+        variable("Java options", "Options of the JVM that runs the service. The default keeps it small: serial collector, 192 MB heap at most, one compiler thread.",
+                 "PHREOX_JAVA_OPTS", "-XX:+UseSerialGC -Xms16m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=96m -XX:ReservedCodeCacheSize=24m -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -XX:-UsePerfData -XX:+ExitOnOutOfMemoryError", "required|string|max:255"),
     ],
 }
 

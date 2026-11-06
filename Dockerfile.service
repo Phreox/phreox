@@ -21,5 +21,5 @@ USER phreox
 ENV PHREOX_DATA_DIR=/data
 VOLUME /data
 
-# ZGC: pauses stay short whatever the heap does, and memory goes back to the host when it is not needed.
-ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:MaxRAMPercentage=70", "-XX:+ExitOnOutOfMemoryError", "-Xlog:gc+init:stdout", "-jar", "/app/phreox-service.jar"]
+# A small JVM: the serial collector and capped heap, stack, metaspace and code cache keep the service near 100 MB (ZGC needed 600).
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xms16m", "-Xmx192m", "-Xss256k", "-XX:MaxMetaspaceSize=96m", "-XX:ReservedCodeCacheSize=24m", "-XX:TieredStopAtLevel=1", "-XX:CICompilerCount=1", "-XX:-UsePerfData", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/phreox-service.jar"]
