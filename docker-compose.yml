@@ -20,6 +20,8 @@ services:
       PHREOX_KLIPY_KEY: ${PHREOX_KLIPY_KEY:-}
       # Operator token: nodes that present it may use reserved domains (official cluster nodes).
       PHREOX_SERVICE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
+      # User names that are super admins of the global dashboard (they still need their second factor).
+      PHREOX_SERVICE_SUPERADMINS: ${PHREOX_SERVICE_SUPERADMINS:-}
     network_mode: host
     volumes:
       - phreox-service-data:/data

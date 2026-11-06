@@ -1,7 +1,8 @@
 #!/bin/bash
 # Brings the server of an egg to the newest release of its channel. Runs at installation and before every start, so a restart of
 # the server in the panel is an update. PHREOX_ARTIFACT says what is fetched: "backend" (phreox-backend-<channel>-<version>.jar,
-# kept as phreox-backend.jar) or "web" (phreox-web-<channel>-<version>.tar.gz, unpacked to web/). A failure keeps what is installed.
+# kept as phreox-backend.jar), "web" (phreox-web-<channel>-<version>.tar.gz, unpacked to web/) or "website" (phreox-website-<version>.tar.gz of the
+# release tag website-<version>, unpacked to web/; the website has no channels of its own). A failure keeps what is installed.
 set -uo pipefail
 
 cd "$(dirname "$0")"
@@ -15,6 +16,7 @@ ARTIFACT="${PHREOX_ARTIFACT:?PHREOX_ARTIFACT is missing}"
 case "$ARTIFACT" in
   backend) extension=jar ;;
   web)     extension=tar.gz ;;
+  website) extension=tar.gz ;;
   *) echo "Unknown artifact '$ARTIFACT'"; exit 1 ;;
 esac
 
@@ -41,12 +43,16 @@ if [[ -n "$TOKEN" ]]; then auth=(-H "Authorization: Bearer $TOKEN"); fi
 mkdir -p app
 releases="$(curl -fsSL "${auth[@]}" -H "Accept: application/vnd.github+json" "$API/repos/$REPO/releases?per_page=30")" || { echo "Releases cannot be read, keeping the installed version"; exit 0; }
 
+# The website is released on its own, with tags website-1.2.3 that no app or service takes for a release of theirs.
+if [[ "$ARTIFACT" == "website" ]]; then pattern='^website-[0-9]+\.[0-9]+\.[0-9]+$'; fi
+
 tag="$(jq -r --arg p "$pattern" '[.[] | select(.draft == false and (.tag_name | test($p)))][0].tag_name // empty' <<<"$releases")"
 
 if [[ -z "$tag" ]]; then echo "No $CHANNEL release exists yet"; exit 0; fi
 if [[ "$(cat app/current 2>/dev/null)" == "$tag" ]]; then echo "Up to date: $tag"; exit 0; fi
 
 asset_name="phreox-$ARTIFACT-$CHANNEL-$tag.$extension"
+if [[ "$ARTIFACT" == "website" ]]; then asset_name="phreox-website-${tag#website-}.tar.gz"; fi
 asset_url="$(jq -r --arg t "$tag" --arg n "$asset_name" '.[] | select(.tag_name == $t) | .assets[] | select(.name == $n) | .url' <<<"$releases")"
 sums_url="$(jq -r --arg t "$tag" '.[] | select(.tag_name == $t) | .assets[] | select(.name == "SHA256SUMS") | .url' <<<"$releases")"
 

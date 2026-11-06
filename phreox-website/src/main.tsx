@@ -1,0 +1,35 @@
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { SessionContext, useSessionState } from "./api.ts";
+import { Layout } from "./components/Layout.tsx";
+import "./index.css";
+import { Dashboard } from "./pages/Dashboard.tsx";
+import { Download } from "./pages/Download.tsx";
+import { Home } from "./pages/Home.tsx";
+import { NewsList, NewsPage } from "./pages/News.tsx";
+
+function Root() {
+  const { me, reload, ready } = useSessionState();
+
+  if (!ready) return null;
+
+  return (
+    <SessionContext.Provider value={{ me, reload }}>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="download" element={<Download />} />
+            <Route path="news" element={<NewsList />} />
+            <Route path="news/:id" element={<NewsPage />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="*" element={<Home />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </SessionContext.Provider>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(<StrictMode><Root /></StrictMode>);

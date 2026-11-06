@@ -89,6 +89,16 @@
       "field_type": "text"
     },
     {
+      "name": "Super admins",
+      "description": "Comma separated user names that are super admins of the global dashboard from the start. They still need the second factor (an authenticator app) to open it; everybody else gets the flag in the dashboard.",
+      "env_variable": "PHREOX_SERVICE_SUPERADMINS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
       "name": "Klipy key",
       "description": "Klipy app key for the GIF search. Without it the service offers no GIFs.",
       "env_variable": "PHREOX_KLIPY_KEY",

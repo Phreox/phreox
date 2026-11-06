@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#07080e" />
+    <title>Phreox</title>
+    <link rel="icon" type="image/png" href="/phreox-logo.png" />
+    <link rel="stylesheet" href="/gate.css" />
+  </head>
+  <body>
+    <div class="aurora"><span style="top:-10%;left:5%;width:34rem;height:34rem;background:#835afc"></span><span style="top:30%;right:0;width:28rem;height:28rem;background:#ff6bb3;opacity:.4;animation-delay:-9s"></span></div>
+
+    <main>
+      <form id="form" autocomplete="on">
+        <img src="/phreox-logo.png" alt="" width="56" height="56" />
+        <h1 data-de="Phreox ist bald da" data-en="Phreox is coming soon">Phreox ist bald da</h1>
+        <p class="lead" data-de="Die Seite ist im Moment nur für das Team. Melde dich mit deinem Phreox-Account an." data-en="The site is for the team only right now. Log in with your Phreox account.">Die Seite ist im Moment nur für das Team. Melde dich mit deinem Phreox-Account an.</p>
+
+        <label><span data-de="Benutzername" data-en="Username">Benutzername</span><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required /></label>
+        <label><span data-de="Passwort" data-en="Password">Passwort</span><input id="password" name="password" type="password" autocomplete="current-password" required /></label>
+
+        <p id="error" role="alert"></p>
+        <button type="submit" data-de="Anmelden" data-en="Log in">Anmelden</button>
+      </form>
+    </main>
+
+    <script src="/gate.js"></script>
+  </body>
+</html>
