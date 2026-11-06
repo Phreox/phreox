@@ -5,10 +5,10 @@ import { Reveal } from "../components/Reveal.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
 type Overview = { accounts: number; newAccounts7d: number; spaces: number; news: number; roles: number; superAdmins: number };
-type Row = { id: string; username: string; createdAt: number; flags: string[]; roles: string[]; mfaEnabled: boolean };
+type Row = { id: string; username: string; createdAt: number; flags: string[]; roles: string[]; mfaEnabled: boolean; badges: string[] };
 type Role = { name: string; flags: string[]; createdAt: number };
 type Audit = { id: string; at: number; actor: string; action: string; detail: string };
-type Catalog = { flags: string[]; categories: string[] };
+type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 
 const tabs = ["overview", "accounts", "roles", "news", "audit"] as const;
 type Tab = (typeof tabs)[number];
@@ -161,6 +161,15 @@ function AccountsTab({ me }: { me: Me }) {
               </Chip>
             ))}
             {roles.value?.length === 0 && <span className="text-xs text-(--text-dark)">{t("dash.roles.none")}</span>}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-14 text-xs text-(--text-dark)">{t("dash.acc.badges")}</span>
+            {catalog.value?.badges.map((badge) => (
+              <Chip key={badge} on={row.badges.includes(badge)} onClick={() => void run(async () => { await call(row.badges.includes(badge) ? "DELETE" : "PUT", `/admin/accounts/${row.id}/badges/${badge}`); rows.reload(); })}>
+                {t(`badge.${badge}` as TextKey)}
+              </Chip>
+            ))}
           </div>
         </Card>
       ))}
