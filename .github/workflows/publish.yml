@@ -95,6 +95,8 @@ jobs:
           node phreox-app/scripts/make-runtime.mjs
       - name: Make this checkout the app of the channel
         working-directory: phreox-app
+        env:
+          PHREOX_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
       - name: Install
         run: |
@@ -131,6 +133,8 @@ jobs:
           node-version: 22
       - name: Make this checkout the app of the channel
         working-directory: phreox-app
+        env:
+          PHREOX_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
       - name: Build the web part
         run: |
@@ -259,6 +263,8 @@ jobs:
           node phreox-app/scripts/make-runtime.mjs
       - name: Make this checkout the app of the channel
         working-directory: phreox-app
+        env:
+          PHREOX_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
       - name: Install
         run: |
