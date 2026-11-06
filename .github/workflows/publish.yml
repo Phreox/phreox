@@ -1,0 +1,204 @@
+# Builds every channel of the apps and publishes them to https://github.com/Phreox/releases.
+#
+#   push to the main branch   ->  pre-release 1.0.0-dev.<8 chars of the commit>, channel dev; only one dev release exists at a time
+#   tag 1.2.3                 ->  normal release, channel release (the stable app)
+#   tag 1.2.3-beta.N / -pre.N / -rc.N       ->  pre-release, channel beta
+#   tag 1.2.3-alpha.N / -pre.alpha.N        ->  pre-release, channel alpha
+#
+# Each channel is an app of its own (own id, name and data). Release, beta and alpha talk to the real services so their accounts
+# are the same; dev has services of its own. See phreox-app/channels.json and docs/RELEASES.md.
+#
+# Secrets: RELEASES_TOKEN (write access to the contents of Phreox/releases, required), SUBMODULES_TOKEN (read access to the
+# submodules, only if they are private), ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS (the key every
+# Android build is signed with, so that an installed app can be updated).
+name: publish
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the branch makes an older run pointless: it would publish a dev release that is replaced at once.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
+env:
+  RELEASES_REPO: Phreox/releases
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.info.outputs.tag }}
+      version: ${{ steps.info.outputs.version }}
+      channel: ${{ steps.info.outputs.channel }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: info
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            node phreox-app/scripts/release-info.mjs "$GITHUB_REF_NAME" | tee -a "$GITHUB_OUTPUT"
+          else
+            short="${GITHUB_SHA:0:8}"
+            {
+              echo "tag=1.0.0-dev.$short"
+              echo "version=1.0.0-dev.$short"
+              echo "channel=dev"
+              echo "prerelease=true"
+            } | tee -a "$GITHUB_OUTPUT"
+          fi
+
+  desktop:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux }
+          - { os: windows-latest, name: win }
+          - { os: macos-latest, name: mac }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Backend jar and the Java runtime that ships with the app
+        run: |
+          mvn -B -q -pl phreox-backend -am -DskipTests package
+          node phreox-app/scripts/make-runtime.mjs
+      - name: Make this checkout the app of the channel
+        working-directory: phreox-app
+        run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Install
+        run: |
+          npm --prefix phreox-frontend ci
+          npm --prefix phreox-app install --no-audit --no-fund
+      - name: Package
+        working-directory: phreox-app
+        run: npm run package:desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            phreox-app/release/phreox-*.AppImage
+            phreox-app/release/phreox-*.exe
+            phreox-app/release/phreox-*.dmg
+
+  android:
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Make this checkout the app of the channel
+        working-directory: phreox-app
+        run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Build the web part
+        run: |
+          npm --prefix phreox-frontend ci
+          npm --prefix phreox-app install --no-audit --no-fund
+          npm --prefix phreox-app run sync:android
+      - name: Signing key
+        id: key
+        run: |
+          if [[ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/phreox.jks"
+          else
+            # Without the shared key the app installs, but cannot be updated over an older build: say so.
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, the APK is signed with a throwaway key and cannot update an installed app"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/phreox.jks" -storepass throwaway -keypass throwaway -alias phreox -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Phreox CI"
+          fi
+      - name: APK
+        working-directory: phreox-app/android
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'throwaway' }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'phreox' }}
+        run: |
+          # The version code grows with every build, so a newer build can always be installed over an older one.
+          ./gradlew --no-daemon assembleRelease \
+            -PphreoxApplicationId="$PHREOX_APP_ID" -PphreoxAppName="$PHREOX_APP_NAME" \
+            -PphreoxVersionName="${{ needs.plan.outputs.version }}" -PphreoxVersionCode="${{ github.run_number }}" \
+            -PphreoxKeystore="$RUNNER_TEMP/phreox.jks" -PphreoxKeystorePassword="$STORE_PASSWORD" -PphreoxKeyAlias="$KEY_ALIAS"
+          mv app/build/outputs/apk/release/app-release.apk \
+            "phreox-${{ needs.plan.outputs.channel }}-${{ needs.plan.outputs.version }}-android-universal.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          if-no-files-found: error
+          path: phreox-app/android/phreox-*.apk
+
+  publish:
+    needs: [plan, desktop, android]
+    runs-on: ubuntu-latest
+    # A dev release replaces the previous one: only the newest commit may publish, an older run is cancelled by a newer one.
+    concurrency:
+      group: publish-${{ needs.plan.outputs.channel == 'dev' && 'dev' || github.ref }}
+      cancel-in-progress: ${{ needs.plan.outputs.channel == 'dev' }}
+    env:
+      GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - name: Checksums
+        working-directory: files
+        run: sha256sum phreox-* > SHA256SUMS
+      - name: Only one dev release at a time
+        if: needs.plan.outputs.channel == 'dev'
+        run: |
+          gh release list -R "$RELEASES_REPO" --limit 200 --json tagName --jq '.[].tagName' \
+            | grep -E -- '-dev\.[0-9a-f]{8}$' | grep -vx -- "$TAG" \
+            | while read -r old; do gh release delete "$old" -R "$RELEASES_REPO" --cleanup-tag --yes; done
+          # A rerun of the same commit replaces its own release.
+          gh release delete "$TAG" -R "$RELEASES_REPO" --cleanup-tag --yes || true
+      - name: Publish
+        run: |
+          if [[ "$PRERELEASE" == "true" ]]; then flags=(--prerelease); else flags=(--latest); fi
+          notes="Channel: $CHANNEL
+          Built from https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          gh release create "$TAG" files/* -R "$RELEASES_REPO" --title "Phreox $TAG" --notes "$notes" "${flags[@]}"

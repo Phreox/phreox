@@ -12,6 +12,8 @@ services:
       dockerfile: Dockerfile.service
     restart: unless-stopped
     environment:
+      # 0.0.0.0 makes the service reachable on every address of this machine (it runs on the host network), e.g. 10.52.10.48.
+      PHREOX_SERVICE_HOST: ${PHREOX_SERVICE_HOST:-0.0.0.0}
       PHREOX_SERVICE_PORT: ${PHREOX_SERVICE_PORT:-8081}
       PHREOX_SERVICE_DATA_DIR: /data
       # Klipy app key for the GIF search; without it the service offers no GIFs. Set it in .env, never in this file.
@@ -55,6 +57,38 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # A backend for phones. The apps on a desktop start their own backend; a phone cannot, so it connects to this one with
+  # its address and token. Anyone with the token acts as the signed-in account: keep it secret and the port in the LAN.
+  # Start it with: docker compose --profile mobile up -d --build
+  backend:
+    profiles: [mobile]
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    depends_on: [service]
+    environment:
+      PHREOX_ENV: LOCAL_DEV
+      PHREOX_BRIDGE_PORT: ${PHREOX_BRIDGE_PORT:-8090}
+      PHREOX_BRIDGE_BIND: 0.0.0.0
+      PHREOX_BRIDGE_TOKEN: ${PHREOX_BRIDGE_TOKEN:?set PHREOX_BRIDGE_TOKEN in .env (at least 32 characters)}
+      PHREOX_BRIDGE_HOSTS: ${PHREOX_BRIDGE_HOSTS:-10.52.10.48:8090}
+      # The origins of the app inside a phone's web view.
+      PHREOX_BRIDGE_ORIGINS: http://localhost,https://localhost,capacitor://localhost
+      PHREOX_LOCAL_KEY: ${PHREOX_LOCAL_KEY:?set PHREOX_LOCAL_KEY in .env (32 random bytes as Base64)}
+      PHREOX_SERVICE_URLS: ${PHREOX_BACKEND_SERVICE_URLS:-http://127.0.0.1:8081}
+      PHREOX_DATA_DIR: /data
+    network_mode: host
+    volumes:
+      - phreox-backend-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:exec
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
+  phreox-backend-data:
   phreox-service-data:
   phreox-space-data:

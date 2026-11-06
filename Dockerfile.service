@@ -21,4 +21,5 @@ USER phreox
 ENV PHREOX_DATA_DIR=/data
 VOLUME /data
 
-ENTRYPOINT ["java", "-jar", "/app/phreox-service.jar"]
+# ZGC: pauses stay short whatever the heap does, and memory goes back to the host when it is not needed.
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:MaxRAMPercentage=70", "-XX:+ExitOnOutOfMemoryError", "-Xlog:gc+init:stdout", "-jar", "/app/phreox-service.jar"]
