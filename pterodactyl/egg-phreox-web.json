@@ -9,7 +9,7 @@
   "description": "The web version of Phreox (phreox.talk): the built app, served by a small Node server. It takes the newest release of its channel at installation and at every start. The app asks for the address of a backend server (backend.phreox.talk).",
   "features": null,
   "docker_images": {
-    "Node 22": "ghcr.io/pterodactyl/yolks:nodejs_22"
+    "Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"
   },
   "file_denylist": [],
   "startup": "PHREOX_ARTIFACT=web bash update.sh; node web/server.mjs",

@@ -120,7 +120,7 @@ write("egg-phreox-web.json", {
     "description": "The web version of Phreox (phreox.talk): the built app, served by a small Node server. It takes the newest release of its channel at "
                    "installation and at every start. The app asks for the address of a backend server (backend.phreox.talk).",
     "features": None,
-    "docker_images": {"Node 22": "ghcr.io/pterodactyl/yolks:nodejs_22"},
+    "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
     "startup": "PHREOX_ARTIFACT=web bash update.sh; node web/server.mjs",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox web: listening"}), "logs": "{}", "stop": "^C"},
@@ -136,7 +136,7 @@ write("egg-phreox-website.json", {
     "description": "The website of Phreox (phreox.com): landing page, downloads of the release channels, news and the global dashboard. It is released on its own "
                    "(tags website-X.Y.Z) and takes the newest one at installation and at every start.",
     "features": None,
-    "docker_images": {"Node 22": "ghcr.io/pterodactyl/yolks:nodejs_22"},
+    "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
     "startup": "PHREOX_ARTIFACT=website bash update.sh; PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) node web/server.mjs",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox website: listening"}), "logs": "{}", "stop": "^C"},

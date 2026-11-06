@@ -9,7 +9,7 @@
   "description": "The website of Phreox (phreox.com): landing page, downloads of the release channels, news and the global dashboard. It is released on its own (tags website-X.Y.Z) and takes the newest one at installation and at every start.",
   "features": null,
   "docker_images": {
-    "Node 22": "ghcr.io/pterodactyl/yolks:nodejs_22"
+    "Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"
   },
   "file_denylist": [],
   "startup": "PHREOX_ARTIFACT=website bash update.sh; PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) node web/server.mjs",
