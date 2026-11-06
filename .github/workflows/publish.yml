@@ -71,7 +71,6 @@ jobs:
         include:
           - { os: ubuntu-latest, name: linux }
           - { os: windows-latest, name: win }
-          - { os: macos-latest, name: mac }
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -111,7 +110,6 @@ jobs:
           path: |
             phreox-app/release/phreox-*.AppImage
             phreox-app/release/phreox-*.exe
-            phreox-app/release/phreox-*.dmg
 
   android:
     needs: plan
@@ -229,3 +227,52 @@ jobs:
           notes="Channel: $CHANNEL
           Built from https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
           gh release create "$TAG" files/* -R "$RELEASES_REPO" --title "Phreox $TAG" --notes "$notes" "${flags[@]}"
+
+  # macOS runners are scarce and can queue for a long time, so the release does not wait for them: the dmg is added to the
+  # release when it is built (and listed in SHA256SUMS).
+  desktop-mac:
+    needs: [plan, publish]
+    runs-on: macos-26
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Backend jar and the Java runtime that ships with the app
+        run: |
+          mvn -B -q -pl phreox-backend -am -DskipTests package
+          node phreox-app/scripts/make-runtime.mjs
+      - name: Make this checkout the app of the channel
+        working-directory: phreox-app
+        run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Install
+        run: |
+          (cd phreox-frontend && npm ci)
+          (cd phreox-app && npm install --no-audit --no-fund)
+      - name: Package
+        working-directory: phreox-app
+        run: npm run package:desktop
+      - name: Add the dmg to the release
+        run: |
+          dmg="$(ls phreox-app/release/phreox-*.dmg | head -1)"
+          tag="${{ needs.plan.outputs.tag }}"
+          gh release upload "$tag" "$dmg" -R "$RELEASES_REPO" --clobber
+          # SHA256SUMS lists it too, so the updater can verify the download.
+          gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D sums --clobber
+          (cd "$(dirname "$dmg")" && shasum -a 256 "$(basename "$dmg")") >> sums/SHA256SUMS
+          gh release upload "$tag" sums/SHA256SUMS -R "$RELEASES_REPO" --clobber
