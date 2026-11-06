@@ -1,0 +1,60 @@
+# Test infrastructure: phreox-service. The backend is not part of this file, every Phreox app starts its own
+# backend as a subprocess (see phreox-app/electron/backend.ts).
+#
+#   cp .env.example .env && docker compose up -d --build
+#
+# The apps find the service through PHREOX_SERVICE_URLS in .env (default http://127.0.0.1:8081).
+services:
+  # Accounts, friends, devices and conversations, persisted in /data.
+  service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    restart: unless-stopped
+    environment:
+      PHREOX_SERVICE_PORT: ${PHREOX_SERVICE_PORT:-8081}
+      PHREOX_SERVICE_DATA_DIR: /data
+      # Klipy app key for the GIF search; without it the service offers no GIFs. Set it in .env, never in this file.
+      PHREOX_KLIPY_KEY: ${PHREOX_KLIPY_KEY:-}
+      # Operator token: nodes that present it may use reserved domains (official cluster nodes).
+      PHREOX_SERVICE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
+    network_mode: host
+    volumes:
+      - phreox-service-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:exec
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # A space node of the cluster. It announces itself at the service and keeps spaces and messages in /data.
+  # Start it with: docker compose --profile cluster up -d --build
+  space:
+    profiles: [cluster]
+    build:
+      context: .
+      dockerfile: Dockerfile.space
+    restart: unless-stopped
+    depends_on: [service]
+    environment:
+      PHREOX_SPACE_PORT: ${PHREOX_SPACE_PORT:-8082}
+      PHREOX_SPACE_DATA_DIR: /data
+      PHREOX_SPACE_SERVICE_URL: ${PHREOX_SPACE_SERVICE_URL:-http://127.0.0.1:8081}
+      PHREOX_SPACE_PUBLIC_URL: ${PHREOX_SPACE_PUBLIC_URL:-http://127.0.0.1:8082}
+      PHREOX_SPACE_USERNAME: ${PHREOX_SPACE_USERNAME:-space-node}
+      PHREOX_SPACE_PASSWORD: ${PHREOX_SPACE_PASSWORD:?set PHREOX_SPACE_PASSWORD in .env}
+      PHREOX_SPACE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
+    network_mode: host
+    volumes:
+      - phreox-space-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:exec
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  phreox-service-data:
+  phreox-space-data:

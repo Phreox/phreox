@@ -1,0 +1,24 @@
+# Build context is the repository root: docker build -f Dockerfile.service .
+FROM maven:3.9-eclipse-temurin-25 AS build
+WORKDIR /src
+
+# The parent pom lists every module, so all of them must be present even though only the service is built.
+COPY pom.xml .
+COPY phreox-api phreox-api
+COPY phreox-server-common phreox-server-common
+COPY phreox-backend phreox-backend
+COPY phreox-service phreox-service
+COPY phreox-space phreox-space
+
+RUN mvn -B -q -pl phreox-service -am -DskipTests package
+
+FROM eclipse-temurin:25-jre
+RUN useradd --system --create-home --uid 10001 phreox && mkdir /data && chown phreox /data
+
+COPY --from=build /src/phreox-service/target/phreox-service.jar /app/phreox-service.jar
+
+USER phreox
+ENV PHREOX_DATA_DIR=/data
+VOLUME /data
+
+ENTRYPOINT ["java", "-jar", "/app/phreox-service.jar"]
