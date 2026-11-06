@@ -8,6 +8,9 @@
 # Each channel is an app of its own (own id, name and data). Release, beta and alpha talk to the real services so their accounts
 # are the same; dev has services of its own. See phreox-app/channels.json and docs/RELEASES.md.
 #
+# The service, the backend and the web version are published too, as phreox-service-*.jar, phreox-backend-*.jar and
+# phreox-web-*.tar.gz: the Pterodactyl eggs in pterodactyl/ install and update themselves from them.
+#
 # Secrets: RELEASES_TOKEN (write access to the contents of Phreox/releases, required), SUBMODULES_TOKEN (read access to the
 # submodules, only if they are private), ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS (the key every
 # Android build is signed with, so that an installed app can be updated).
@@ -197,8 +200,68 @@ jobs:
           if-no-files-found: error
           path: out/phreox-service-*.jar
 
+  backend:
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: phreox-backend.jar
+        run: |
+          mvn -B -q -pl phreox-backend -am -DskipTests package
+          mkdir -p out
+          # The Pterodactyl egg "Phreox Backend" takes this file: phreox-backend-<channel>-<version>.jar
+          cp phreox-backend/target/phreox-backend.jar "out/phreox-backend-${{ needs.plan.outputs.channel }}-${{ needs.plan.outputs.version }}.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend
+          if-no-files-found: error
+          path: out/phreox-backend-*.jar
+
+  # The web version (phreox.talk): the built app and the small server that serves it. The egg "Phreox Web" takes this archive.
+  web:
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        env:
+          VITE_PHREOX_WEB: "1"
+          VITE_PHREOX_CHANNEL: ${{ needs.plan.outputs.channel }}
+          VITE_PHREOX_VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          (cd phreox-frontend && npm ci && npx vite build)
+          mkdir -p pack out
+          cp -r phreox-frontend/dist pack/site
+          cp pterodactyl/web-server.mjs pack/server.mjs
+          tar -czf "out/phreox-web-${{ needs.plan.outputs.channel }}-${{ needs.plan.outputs.version }}.tar.gz" -C pack .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          if-no-files-found: error
+          path: out/phreox-web-*.tar.gz
+
   publish:
-    needs: [plan, desktop, android, service]
+    needs: [plan, desktop, android, service, backend, web]
     runs-on: ubuntu-latest
     # A dev release replaces the previous one: only the newest commit may publish, an older run is cancelled by a newer one.
     concurrency:
