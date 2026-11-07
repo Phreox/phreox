@@ -81,6 +81,8 @@ jobs:
       - name: Build opus.dll and portaudio.dll
         env:
           SKIP_WINE: "1"
+          # The MinGW of Ubuntu uses the old C runtime (msvcrt.dll, which every Windows has) instead of the Universal CRT the script is made for.
+          ALLOWED_DLLS: '^(KERNEL32|USER32|WINMM|ole32|msvcrt|api-ms-win-crt-[a-z0-9-]+)\.dll$'
         run: bash phreox-backend/native/build-windows.sh
       - uses: actions/upload-artifact@v4
         with:
