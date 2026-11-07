@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useSession } from "../api.ts";
 import { setLang, useT } from "../i18n.ts";
 
@@ -9,6 +9,9 @@ export function Layout() {
   const { me, reload } = useSession();
   const link = ({ isActive }: { isActive: boolean }) => `rounded-lg px-3 py-2 text-[0.95rem] font-medium transition-colors ${isActive ? "text-white" : "text-(--text-washed) hover:text-white"}`;
   const admin = me?.flags.includes("super-admin");
+  // The dashboard uses the whole width, the other pages a column.
+  const wide = useLocation().pathname.startsWith("/dashboard");
+  const width = wide ? "max-w-none sm:px-6" : "max-w-6xl";
 
   async function logout() {
     await fetch("/_auth/logout", { method: "POST", headers: { "X-Phreox-Site": "1" } });
@@ -27,7 +30,7 @@ export function Layout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 border-b border-white/8 bg-(--ink)/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-5">
+        <div className={`mx-auto flex h-16 ${width} items-center gap-3 px-5`}>
           <Link to="/" className="flex items-center gap-3">
             <img src="/phreox-logo.png" alt="" className="size-9 rounded-[0.7rem]" />
             <span className="display text-2xl" style={{ letterSpacing: "-0.01em" }}>Phreox</span>
@@ -47,8 +50,8 @@ export function Layout() {
 
       <main className="flex-1"><Outlet /></main>
 
-      <footer className="mt-28 border-t border-white/8">
-        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:grid-cols-[1fr_auto]">
+      <footer className={`${wide ? "mt-12" : "mt-28"} border-t border-white/8`}>
+        <div className={`mx-auto grid ${width} gap-10 px-5 py-12 sm:grid-cols-[1fr_auto]`}>
           <div>
             <p className="flex items-center gap-3"><img src="/phreox-logo.png" alt="" className="size-9 rounded-[0.7rem]" /><span className="display text-2xl">Phreox</span></p>
             <p className="mt-3 max-w-xs text-(--text-washed)">{t("footer.text")}</p>
@@ -64,7 +67,7 @@ export function Layout() {
           </div>
         </div>
 
-        <p className="mx-auto max-w-6xl px-5 pb-10 text-sm text-(--text-dark)">© {new Date().getFullYear()} Phreox · phreox.com · {t("footer.rights")}</p>
+        <p className={`mx-auto ${width} px-5 pb-10 text-sm text-(--text-dark)`}>© {new Date().getFullYear()} Phreox · phreox.com · {t("footer.rights")}</p>
       </footer>
     </div>
   );
