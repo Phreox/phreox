@@ -144,7 +144,7 @@ async function login(request, response) {
     return json(response, 400, { error: "Bad request" });
   }
 
-  const { status, text } = await callService("POST", "/auth/login", null, JSON.stringify({ username: credentials.username, password: credentials.password }));
+  const { status, text } = await callService("POST", "/auth/login", null, JSON.stringify({ username: credentials.username, password: credentials.password, code: credentials.code || undefined }));
 
   if (status !== 200) return send(response, status, text, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 
@@ -160,6 +160,21 @@ async function login(request, response) {
   }
 
   json(response, 200, { username: session.username, flags: me?.flags ?? [] }, { "Set-Cookie": sessionCookie(request, session.token, Math.max(60, Math.floor((session.expiresAt - Date.now()) / 1000))) });
+}
+
+/** Mails the code for the second step to an account that uses codes by mail (the service checks the password first). */
+async function loginCode(request, response) {
+  let credentials;
+
+  try {
+    credentials = JSON.parse(await readBody(request));
+  } catch {
+    return json(response, 400, { error: "Bad request" });
+  }
+
+  const { status, text } = await callService("POST", "/auth/login/email-code", null, JSON.stringify({ username: credentials.username, password: credentials.password }));
+
+  send(response, status === 204 ? 200 : status, status === 204 || !text ? "{}" : text, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 }
 
 async function logout(request, response) {
@@ -366,6 +381,7 @@ createServer(async (request, response) => {
     }
 
     if (url.pathname === "/_auth/login" && request.method === "POST") return await login(request, response);
+    if (url.pathname === "/_auth/login/email-code" && request.method === "POST") return await loginCode(request, response);
     if (url.pathname === "/_auth/logout" && request.method === "POST") return await logout(request, response);
     if (url.pathname === "/robots.txt") return send(response, 200, robots(), { "Content-Type": "text/plain; charset=utf-8" });
 

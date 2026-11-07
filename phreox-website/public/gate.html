@@ -21,6 +21,9 @@
         <label><span data-de="Benutzername" data-en="Username">Benutzername</span><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required /></label>
         <label><span data-de="Passwort" data-en="Password">Passwort</span><input id="password" name="password" type="password" autocomplete="current-password" required /></label>
 
+        <label id="code-field" hidden><span id="code-label" data-de="Code" data-en="Code">Code</span><input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="12" /></label>
+        <button type="button" id="mail" class="link" hidden data-de="Code per E-Mail senden" data-en="Send a code by email">Code per E-Mail senden</button>
+
         <p id="error" role="alert"></p>
         <button type="submit" data-de="Anmelden" data-en="Log in">Anmelden</button>
       </form>
