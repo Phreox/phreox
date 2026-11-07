@@ -12,13 +12,29 @@ COPY phreox-space phreox-space
 
 RUN mvn -B -q -pl phreox-service -am -DskipTests package
 
+# libphreox_mls, the OpenMLS core of the end-to-end encrypted private conversations. Rust is not built here: the .so comes from
+# phreox-backend/native/phreox-mls/target/release/ (cargo build --release in phreox-backend/native/phreox-mls), is let into the build context by
+# .dockerignore, and is taken from there. It needs a glibc no newer than the one of the image below, so build it on a machine that is not newer.
+# Without it the image still builds and the service still starts: private conversations are then refused (503) outside the development environments.
+RUN mkdir -p /out/natives \
+    && if [ -f phreox-backend/native/phreox-mls/target/release/libphreox_mls.so ]; then cp phreox-backend/native/phreox-mls/target/release/libphreox_mls.so /out/natives/; \
+       else echo "WARNING: phreox-backend/native/phreox-mls/target/release/libphreox_mls.so is missing, the image has no end-to-end encryption"; fi
+
 FROM eclipse-temurin:25-jre
 RUN useradd --system --create-home --uid 10001 phreox && mkdir /data && chown phreox /data
 
 COPY --from=build /src/phreox-service/target/phreox-service.jar /app/phreox-service.jar
+COPY --from=build /out/natives /opt/phreox/natives
 
 USER phreox
+# WARNING: the service reads PHREOX_SERVICE_DATA_DIR, not PHREOX_DATA_DIR (docker-compose.yml sets it to /data). Without PHREOX_SERVICE_DATA_DIR the service has
+# no data directory: accounts are kept in memory, and the key of the MLS delivery service and all MLS groups are LOST on every restart, which ends every
+# private conversation. Always run this image with PHREOX_SERVICE_DATA_DIR=/data (and the volume); the service logs a loud WARN at start if it is missing.
 ENV PHREOX_DATA_DIR=/data
+# Where the service looks for the MLS library first; a file that is not there means "no library", not an error. The key of the MLS delivery
+# service is kept in the data volume (/data/mls.key, PHREOX_MLS_KEY_FILE), next to the other keys; set PHREOX_ENV (anything but LOCAL_DEV / REMOTE_DEV
+# makes private conversations require the library).
+ENV PHREOX_NATIVE_MLS=/opt/phreox/natives/libphreox_mls.so
 VOLUME /data
 
 # A small JVM: the serial collector and capped heap, stack, metaspace and code cache keep the service near 100 MB (ZGC needed 600).

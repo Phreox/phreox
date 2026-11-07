@@ -1,5 +1,7 @@
 .git
 **/target
+# the one build output the service image takes (see Dockerfile.service)
+!phreox-backend/native/phreox-mls/target/release/libphreox_mls.so
 **/node_modules
 **/dist
 docs
