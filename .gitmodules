@@ -25,3 +25,6 @@
 [submodule "phreox-space"]
 	path = phreox-space
 	url = https://github.com/Phreox/space.git
+[submodule "watchtogether"]
+	path = watchtogether
+	url = https://github.com/Phreox/watchtogether.git
