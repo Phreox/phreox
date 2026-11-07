@@ -17,7 +17,7 @@ type Audit = { id: string; at: number; actor: string; action: string; detail: st
 type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 
 type System = { startedAt: number; uptimeMillis: number; java: string; os: string; processors: number; heapUsed: number; heapMax: number; accounts: number; spaces: number; spaceMembers: number; spaceMessages: number; spaceInvites: number; bots: number; badgeGrants: number; mfaAccounts: number };
-type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt: number; level: number; createdAt: number; updatedAt: number };
+type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt?: number; level?: number; createdAt: number; updatedAt: number };
 
 const tabs = ["overview", "reports", "tickets", "accounts", "spaces", "roles", "news", "audit", "system", "settings"] as const;
 type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number };
@@ -441,7 +441,8 @@ function SpacesTab({ tick }: { tick: number }) {
                 <td className={cell}>{row.listed ? "✓" : "–"}</td>
                 <td className={cell}>{row.members}</td>
                 <td className={cell}>{row.channels}</td>
-                <td className={cell}>{row.volt} · {t("dash.sp.level", { n: row.level })}</td>
+                {/* An older service does not count Volt yet: then there is nothing to show. */}
+                <td className={cell}>{typeof row.volt === "number" ? `${row.volt} · ${t("dash.sp.level", { n: row.level ?? 0 })}` : "–"}</td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.createdAt).toLocaleDateString(lang)}</td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.updatedAt).toLocaleString(lang)}</td>
               </tr>

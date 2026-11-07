@@ -64,17 +64,24 @@ print("egg-phreox-service.json:", len(egg["variables"]), "variables")
 # ---- the backend server (backend.phreox.talk) and the web version (phreox.talk) ----
 
 update_script = (here / "update.sh").read_text()
+run_script = (here / "run.sh").read_text()
 channel = variable("Update channel", "Which releases this server follows: release (stable), beta (beta, pre, rc), alpha or dev. The server only takes releases of its own channel.",
                    "PHREOX_UPDATE_CHANNEL", "release", "required|string|in:release,beta,alpha,dev")
 repository = variable("Releases repository", "GitHub repository the releases are published to.",
                       "PHREOX_UPDATE_REPO", "Phreox/releases", "required|string|regex:/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/")
+seconds = variable("Update check (seconds)", "How often the server looks for a new release of its channel. When there is one it installs it and restarts itself. 0 turns the looking off (the update then only "
+                   "happens when the server is started).", "PHREOX_UPDATE_SECONDS", "30", "required|integer|min:0|max:3600")
 token = variable("GitHub token", "Token with read access to the contents of the releases repository. Needed while that repository is private.",
                  "PHREOX_UPDATE_TOKEN", "", "nullable|string|max:255", False)
 
 
 def installer(artifact):
-    # The installer writes the update script next to the server and runs it once; the start command runs it before every start.
-    return f"#!/bin/bash\nset -euo pipefail\ncd /mnt/server\ncat > update.sh <<'PHREOX_UPDATE'\n{update_script}\nPHREOX_UPDATE\nchmod +x update.sh\nPHREOX_ARTIFACT={artifact} bash update.sh\n"
+    # The installer writes the update script and the one that keeps the server running next to it, and updates once. The start command runs run.sh,
+    # which updates again before the start and then looks for a new release every PHREOX_UPDATE_SECONDS.
+    return (f"#!/bin/bash\nset -euo pipefail\ncd /mnt/server\n"
+            f"cat > update.sh <<'PHREOX_UPDATE'\n{update_script}\nPHREOX_UPDATE\nchmod +x update.sh\n"
+            f"cat > run.sh <<'PHREOX_RUN'\n{run_script}\nPHREOX_RUN\nchmod +x run.sh\n"
+            f"PHREOX_ARTIFACT={artifact} bash update.sh\n")
 
 
 def write(file, egg):
@@ -91,15 +98,15 @@ write("egg-phreox-backend.json", {
     "exported_at": "2026-11-06T00:00:00+00:00",
     "name": "Phreox Backend",
     "description": "phreox-backend as a server (backend.phreox.talk): the backend that the web version of Phreox talks to. It takes the newest release of its "
-                   "channel at installation and at every start, and is reached with an address and a token.",
+                   "channel at installation, at every start and every 30 seconds (it restarts itself then), and is reached with an address and a token.",
     "features": None,
     "docker_images": {"Java 25": "ghcr.io/pterodactyl/yolks:java_25"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=backend bash update.sh; PHREOX_BRIDGE_PORT={{SERVER_PORT}} PHREOX_DATA_DIR=/home/container/data java {{PHREOX_JAVA_OPTS}} -jar phreox-backend.jar",
+    "startup": "PHREOX_ARTIFACT=backend exec bash run.sh 'PHREOX_BRIDGE_PORT={{SERVER_PORT}} PHREOX_DATA_DIR=/home/container/data exec java {{PHREOX_JAVA_OPTS}} -jar phreox-backend.jar'",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox backend"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("backend"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
-        channel, repository, token,
+        channel, repository, seconds, token,
         variable("Bridge token", "Secret that everyone needs who uses this backend, at least 32 characters. Whoever has it acts as the signed-in account: keep it secret.",
                  "PHREOX_BRIDGE_TOKEN", "", "required|string|min:32|max:255", False),
         variable("Local key", "32 random bytes as Base64 (openssl rand -base64 32). Secrets of the backend are encrypted with it; without it nothing secret is stored.",
@@ -125,14 +132,14 @@ write("egg-phreox-web.json", {
     "exported_at": "2026-11-06T00:00:00+00:00",
     "name": "Phreox Web",
     "description": "The web version of Phreox (phreox.talk): the built app, served by a small Node server. It takes the newest release of its channel at "
-                   "installation and at every start. The app asks for the address of a backend server (backend.phreox.talk).",
+                   "installation and every 30 seconds (it restarts itself then). The app asks for the address of a backend server (backend.phreox.talk).",
     "features": None,
     "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=web bash update.sh; node web/server.mjs",
+    "startup": "PHREOX_ARTIFACT=web exec bash run.sh 'exec node web/server.mjs'",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox web: listening"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("web"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
-    "variables": [channel, repository, token],
+    "variables": [channel, repository, seconds, token],
 })
 
 write("egg-phreox-website.json", {
@@ -141,15 +148,15 @@ write("egg-phreox-website.json", {
     "exported_at": "2026-11-06T00:00:00+00:00",
     "name": "Phreox Website",
     "description": "The website of Phreox (phreox.com): landing page, downloads of the release channels, news and the global dashboard. It is released on its own "
-                   "(tags website-X.Y.Z) and takes the newest one at installation and at every start.",
+                   "(tags website-X.Y.Z) and takes the newest one at installation and every 30 seconds (it restarts itself then).",
     "features": None,
     "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=website bash update.sh; PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) node web/server.mjs",
+    "startup": "PHREOX_ARTIFACT=website exec bash run.sh 'PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) exec node web/server.mjs'",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox website: listening"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("website"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
-        repository, token,
+        repository, seconds, token,
         variable("Service", "Address of the Phreox service that knows the accounts and keeps the news.",
                  "PHREOX_SERVICE_URL", "https://service.phreox.talk", "required|string|max:255"),
         variable("Domain", "The one domain of the site. www. and every other name is sent there with a redirect.",
