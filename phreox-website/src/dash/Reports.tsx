@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { call, type Me, useLoad } from "../api.ts";
 import { type TextKey, useT } from "../i18n.ts";
-import { Notes } from "./Notes.tsx";
+import { AccountManager } from "./AccountManager.tsx";
 import { ago, Avatar, Button, Card, Empty, ErrorLine, Heading, Pill, type Tone, useAction } from "./ui.tsx";
 
 export type Report = { id: string; reporterId: string; reporter: string; accusedId: string; accused: string; spaceId: string; channelId: string; messageId: string; content: string; reason: string; note: string; verified: boolean;
@@ -86,8 +86,8 @@ export function Reports({ me, tick, onChange }: { me: Me; tick: number; onChange
           </div>
 
           <div>
-            <Heading>{t("dash.notes.title")} · {report.accused}</Heading>
-            <Notes accountId={report.accusedId} me={me.username} />
+            <Heading>{t("dash.acct.manage")} · {report.accused}</Heading>
+            <AccountManager accountId={report.accusedId} me={me} />
           </div>
         </Card>
       )}

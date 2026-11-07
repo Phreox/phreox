@@ -3,10 +3,11 @@ import { type FormEvent, Fragment, useEffect, useState } from "react";
 import { call, type Me, type NewsPost, useLoad, useSession } from "../api.ts";
 import { defaults, type Widget, setDashSettings, useDashSettings, widgetNames } from "../dashSettings.ts";
 import { DashIcon } from "../dash/icons.tsx";
-import { Notes } from "../dash/Notes.tsx";
+import { AccountManager } from "../dash/AccountManager.tsx";
+import { Creator } from "../dash/Creator.tsx";
 import { Reports } from "../dash/Reports.tsx";
 import { Tickets } from "../dash/Tickets.tsx";
-import { Avatar, Card, Chip, Count, Heading, Th, useAction } from "../dash/ui.tsx";
+import { Avatar, Card, Chip, Count, Heading, Pill, Th, useAction } from "../dash/ui.tsx";
 import { Reveal } from "../components/Reveal.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
@@ -19,8 +20,9 @@ type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 type System = { startedAt: number; uptimeMillis: number; java: string; os: string; processors: number; heapUsed: number; heapMax: number; accounts: number; spaces: number; spaceMembers: number; spaceMessages: number; spaceInvites: number; bots: number; badgeGrants: number; mfaAccounts: number };
 type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt?: number; level?: number; createdAt: number; updatedAt: number };
 
-const tabs = ["overview", "reports", "tickets", "accounts", "spaces", "roles", "news", "audit", "system", "settings"] as const;
-type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number };
+const tabs = ["overview", "reports", "tickets", "creator", "accounts", "spaces", "roles", "news", "audit", "system", "settings"] as const;
+type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number; decorationsPending?: number };
+type Standing = { accountId: string; status: "" | "suspended" | "banned"; warnings: number };
 type Tab = (typeof tabs)[number];
 
 // ---- second factor -------------------------------------------------------------------------------------------------
@@ -289,6 +291,7 @@ function QueueWidget({ queue, go }: { queue?: Queue; go: (tab: Tab) => void }) {
   const rows: [string, number | undefined, Tab][] = [
     [t("dash.ov.reportsOpen"), queue ? queue.reportsOpen + queue.reportsReview : undefined, "reports"],
     [t("dash.ov.ticketsOpen"), queue?.ticketsOpen, "tickets"],
+    [t("dash.ov.decorations"), queue?.decorationsPending, "creator"],
     [t("dash.ov.mineWork"), queue ? queue.reportsMine + queue.ticketsMine : undefined, "tickets"],
   ];
 
@@ -331,7 +334,8 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
   const cell = useRow();
   const [query, setQuery] = useState("");
   const [only, setOnly] = useState("");
-  const [notesFor, setNotesFor] = useState<string>();
+  const [manage, setManage] = useState<string>();
+  const standings = useLoad(() => call<Standing[]>("GET", "/admin/support/standings"), [tick]);
   const catalog = useLoad(() => call<Catalog>("GET", "/admin/catalog"));
   const roles = useLoad(() => call<Role[]>("GET", "/admin/roles"));
   const rows = useLoad(() => call<Row[]>("GET", `/admin/accounts?query=${encodeURIComponent(query)}`), [query, tick]);
@@ -345,6 +349,7 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
     .filter((row) => !only || row.flags.includes(only))
     .sort((a, b) => sort === "name" ? a.username.localeCompare(b.username) : b.createdAt - a.createdAt);
   const badges = catalog.value?.badges ?? [];
+  const standingOf = (id: string) => standings.value?.find((entry) => entry.accountId === id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -363,14 +368,14 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
       <div className="glass overflow-x-auto rounded-3xl">
         <table className="w-full min-w-[60rem] text-sm">
           <thead className="border-b border-white/8">
-            <tr><Th>{t("dash.acc.username")}</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.acc.mfa")}</Th><Th>{t("dash.acc.flags")}</Th><Th>{t("dash.acc.roles")}</Th>{badges.length > 0 && <Th>{t("dash.acc.badges")}</Th>}<Th>{t("dash.notes.title")}</Th></tr>
+            <tr><Th>{t("dash.acc.username")}</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.acc.mfa")}</Th><Th>{t("dash.acc.flags")}</Th><Th>{t("dash.acc.roles")}</Th>{badges.length > 0 && <Th>{t("dash.acc.badges")}</Th>}<Th>{t("dash.acct.manage")}</Th></tr>
           </thead>
           <tbody>
             {shown.map((row) => (
               <Fragment key={row.id}>
               <tr className="border-b border-white/5 align-top last:border-0">
                 <td className={cell}>
-                  <p className="flex items-center gap-2 font-semibold"><Avatar name={row.username} size={22} />{row.username}{row.id === me.id && <span className="ml-2 text-xs text-(--accent)">(du)</span>}</p>
+                  <p className="flex items-center gap-2 font-semibold"><Avatar name={row.username} size={22} />{row.username}{row.id === me.id && <span className="ml-2 text-xs text-(--accent)">(du)</span>}{standingOf(row.id)?.status === "banned" && <Pill tone="red">{t("dash.mod.banned")}</Pill>}{standingOf(row.id)?.status === "suspended" && <Pill tone="red">{t("dash.mod.suspended")}</Pill>}{(standingOf(row.id)?.warnings ?? 0) > 0 && <Pill tone="orange">{t("dash.mod.warnings", { n: standingOf(row.id)?.warnings ?? 0 })}</Pill>}</p>
                   {ids && <p className="font-mono text-xs text-(--text-dark)">{row.id}</p>}
                 </td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.createdAt).toLocaleDateString(lang)}</td>
@@ -398,9 +403,9 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
                     ))}
                   </div>
                 </td>}
-                <td className={cell}><button type="button" className="cursor-pointer text-xs text-(--accent) hover:underline" onClick={() => setNotesFor(notesFor === row.id ? undefined : row.id)}>{notesFor === row.id ? t("common.cancel") : t("dash.notes.title")}</button></td>
+                <td className={cell}><button type="button" className="cursor-pointer text-xs text-(--accent) hover:underline" onClick={() => setManage(manage === row.id ? undefined : row.id)}>{manage === row.id ? t("common.cancel") : t("dash.acct.manage")}</button></td>
               </tr>
-              {notesFor === row.id && <tr className="border-b border-white/5"><td colSpan={badges.length > 0 ? 7 : 6} className="bg-(--background-dark) px-4 py-4"><Notes accountId={row.id} me={me.username} /></td></tr>}
+              {manage === row.id && <tr className="border-b border-white/5"><td colSpan={badges.length > 0 ? 7 : 6} className="bg-(--background-panel) px-4 py-4"><AccountManager accountId={row.id} me={me} /></td></tr>}
               </Fragment>
             ))}
           </tbody>
@@ -668,11 +673,11 @@ function SettingsTab() {
 
 const groups: { title: TextKey; tabs: Tab[] }[] = [
   { title: "dash.group.platform", tabs: ["overview"] },
-  { title: "dash.group.support", tabs: ["reports", "tickets"] },
+  { title: "dash.group.support", tabs: ["reports", "tickets", "creator"] },
   { title: "dash.group.manage", tabs: ["accounts", "spaces", "roles", "news"] },
   { title: "dash.group.system", tabs: ["audit", "system", "settings"] },
 ];
-const supportTabs: Tab[] = ["reports", "tickets"];
+const supportTabs: Tab[] = ["reports", "tickets", "creator"];
 
 export function Dashboard() {
   const { t, lang } = useT();
@@ -723,7 +728,7 @@ export function Dashboard() {
     return <section className="mx-auto max-w-xl px-4 pt-24 text-center text-(--text-washed)">{t("dash.noAccess")}</section>;
   }
 
-  const count = (name: Tab) => name === "reports" ? (queue ? queue.reportsOpen + queue.reportsReview : 0) : name === "tickets" ? queue?.ticketsOpen ?? 0 : 0;
+  const count = (name: Tab) => name === "reports" ? (queue ? queue.reportsOpen + queue.reportsReview : 0) : name === "tickets" ? queue?.ticketsOpen ?? 0 : name === "creator" ? queue?.decorationsPending ?? 0 : 0;
 
   return (
     <section className="dash w-full px-3 pt-4 sm:px-4">
@@ -785,6 +790,7 @@ export function Dashboard() {
               {current === "overview" && <OverviewTab tick={tick} go={go} queue={queue} />}
               {current === "reports" && <Reports me={me} tick={tick} onChange={() => setStamp((value) => value + 1)} />}
               {current === "tickets" && <Tickets me={me} tick={tick} onChange={() => setStamp((value) => value + 1)} />}
+              {current === "creator" && <Creator me={me} tick={tick} onChange={() => setStamp((value) => value + 1)} />}
               {current === "accounts" && <AccountsTab me={me} tick={tick} />}
               {current === "spaces" && <SpacesTab tick={tick} />}
               {current === "roles" && <RolesTab tick={tick} />}

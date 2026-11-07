@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { call, type Me, useLoad } from "../api.ts";
 import { type TextKey, useT } from "../i18n.ts";
-import { Notes } from "./Notes.tsx";
+import { AccountManager } from "./AccountManager.tsx";
 import { ago, Avatar, Button, Card, Empty, ErrorLine, Heading, inputClass, Pill, type Tone, useAction } from "./ui.tsx";
 
 type Ticket = { id: string; requesterId: string; requester: string; subject: string; category: string; status: "open" | "pending" | "closed"; assignee: string; createdAt: number; updatedAt: number; messages: number };
@@ -136,8 +136,8 @@ export function Tickets({ me, tick, onChange }: { me: Me; tick: number; onChange
           <ErrorLine error={error} />
 
           <div>
-            <Heading>{t("dash.notes.title")} · {open.requester}</Heading>
-            <Notes accountId={open.requesterId} me={me.username} />
+            <Heading>{t("dash.acct.manage")} · {open.requester}</Heading>
+            <AccountManager accountId={open.requesterId} me={me} />
           </div>
         </Card>
       )}
