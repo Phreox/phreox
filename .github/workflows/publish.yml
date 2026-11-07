@@ -8,6 +8,9 @@
 # Each channel is an app of its own (own id, name and data). Release, beta and alpha talk to the real services so their accounts
 # are the same; dev has services of its own. See phreox-app/channels.json and docs/RELEASES.md.
 #
+# The Windows installer (exe) and the macOS image (dmg) are built after the release exists and added to it, so the release does not wait
+# for their runners.
+#
 # The service, the backend and the web version are published too, as phreox-service-*.jar, phreox-backend-*.jar and
 # phreox-web-*.tar.gz: the Pterodactyl eggs in pterodactyl/ install and update themselves from them.
 #
@@ -73,7 +76,6 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, name: linux }
-          - { os: windows-latest, name: win }
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -114,7 +116,6 @@ jobs:
           if-no-files-found: error
           path: |
             phreox-app/release/phreox-*.AppImage
-            phreox-app/release/phreox-*.exe
 
   android:
     needs: plan
@@ -323,8 +324,69 @@ jobs:
           Built from https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
           gh release create "$TAG" files/* -R "$RELEASES_REPO" --title "Phreox $TAG" --notes "$notes" "${flags[@]}"
 
-  # macOS runners are scarce and can queue for a long time, so the release does not wait for them: the dmg is added to the
-  # release when it is built (and listed in SHA256SUMS).
+  # Windows and macOS runners are scarce and can queue for a long time, so the release does not wait for them: the exe and the dmg
+  # are added to the release when they are built (and listed in SHA256SUMS).
+  desktop-win:
+    needs: [plan, publish]
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Backend jar and the Java runtime that ships with the app
+        run: |
+          mvn -B -q -pl phreox-backend -am -DskipTests package
+          node phreox-app/scripts/make-runtime.mjs
+      - name: Make this checkout the app of the channel
+        working-directory: phreox-app
+        env:
+          PHREOX_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        run: node scripts/prepare-channel.mjs "${{ needs.plan.outputs.channel }}" "${{ needs.plan.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Install
+        run: |
+          (cd phreox-frontend && npm ci)
+          (cd phreox-app && npm install --no-audit --no-fund)
+      - name: Package
+        working-directory: phreox-app
+        run: npm run package:desktop
+      - name: Add the exe to the release
+        run: |
+          FILE="$(ls phreox-app/release/phreox-*.exe | head -1)"
+          tag="${{ needs.plan.outputs.tag }}"
+          gh release upload "$tag" "$FILE" -R "$RELEASES_REPO" --clobber
+          # SHA256SUMS lists it too, so the updater can verify the download. The Windows and the macOS build finish at about the same time and
+          # both change this file: each one adds its line again until it is really in the file that is up there.
+          name="$(basename "$FILE")"
+          line="$(cd "$(dirname "$FILE")" && sha256sum "$name")"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            rm -rf sums check
+            gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D sums --clobber
+            { grep -v -- "  $name\$" sums/SHA256SUMS || true; echo "$line"; } > sums/new
+            mv sums/new sums/SHA256SUMS
+            gh release upload "$tag" sums/SHA256SUMS -R "$RELEASES_REPO" --clobber
+            sleep $((RANDOM % 8 + 4))
+            gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D check --clobber
+            if grep -qxF -- "$line" check/SHA256SUMS; then exit 0; fi
+          done
+          echo "::error::$name is in the release but not in SHA256SUMS"
+          exit 1
+
   desktop-mac:
     needs: [plan, publish]
     runs-on: macos-26
@@ -366,10 +428,22 @@ jobs:
         run: npm run package:desktop
       - name: Add the dmg to the release
         run: |
-          dmg="$(ls phreox-app/release/phreox-*.dmg | head -1)"
+          FILE="$(ls phreox-app/release/phreox-*.dmg | head -1)"
           tag="${{ needs.plan.outputs.tag }}"
-          gh release upload "$tag" "$dmg" -R "$RELEASES_REPO" --clobber
-          # SHA256SUMS lists it too, so the updater can verify the download.
-          gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D sums --clobber
-          (cd "$(dirname "$dmg")" && shasum -a 256 "$(basename "$dmg")") >> sums/SHA256SUMS
-          gh release upload "$tag" sums/SHA256SUMS -R "$RELEASES_REPO" --clobber
+          gh release upload "$tag" "$FILE" -R "$RELEASES_REPO" --clobber
+          # SHA256SUMS lists it too, so the updater can verify the download. The Windows and the macOS build finish at about the same time and
+          # both change this file: each one adds its line again until it is really in the file that is up there.
+          name="$(basename "$FILE")"
+          line="$(cd "$(dirname "$FILE")" && shasum -a 256 "$name")"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            rm -rf sums check
+            gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D sums --clobber
+            { grep -v -- "  $name\$" sums/SHA256SUMS || true; echo "$line"; } > sums/new
+            mv sums/new sums/SHA256SUMS
+            gh release upload "$tag" sums/SHA256SUMS -R "$RELEASES_REPO" --clobber
+            sleep $((RANDOM % 8 + 4))
+            gh release download "$tag" -R "$RELEASES_REPO" -p SHA256SUMS -D check --clobber
+            if grep -qxF -- "$line" check/SHA256SUMS; then exit 0; fi
+          done
+          echo "::error::$name is in the release but not in SHA256SUMS"
+          exit 1

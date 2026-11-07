@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /** What the overview shows. The order is the order on the page. */
-export const widgetNames = ["stats", "accounts", "spaces", "audit", "news", "system", "roles"] as const;
+export const widgetNames = ["queue", "stats", "accounts", "spaces", "audit", "news", "system", "roles"] as const;
 export type Widget = (typeof widgetNames)[number];
 
 export type DashSettings = {
@@ -14,7 +14,7 @@ export type DashSettings = {
 };
 
 export const defaults: DashSettings = {
-  widgets: { stats: true, accounts: true, spaces: true, audit: true, news: true, system: true, roles: true },
+  widgets: { queue: true, stats: true, accounts: true, spaces: true, audit: true, news: true, system: true, roles: true },
   density: "comfortable",
   refresh: 0,
   ids: false,

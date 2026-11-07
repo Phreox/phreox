@@ -117,3 +117,14 @@
   .arrive { opacity: 1; }
   .ripple-ring { opacity: 0.25; }
 }
+
+/* The dashboard is a part of the app's family: its buttons and fields look like the ones of the app, not like the ones of the landing page. */
+.dash .btn { border-radius: 0.75rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600; gap: 0.5rem; box-shadow: none; transform: none; }
+.dash .btn:hover, .dash .btn:active { transform: none; box-shadow: none; }
+.dash .btn-primary { background: var(--brand); box-shadow: none; }
+.dash .btn-primary:hover { background: var(--brand-hover); }
+.dash .btn-ghost { background: transparent; box-shadow: none; border: 1px solid var(--border-panel); color: var(--text-washed); }
+.dash .btn-ghost:hover { border-color: var(--brand); color: #fff; background: transparent; }
+.dash .btn-small { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+.dash .field { border-radius: 0.75rem; background: var(--background-dark); border: 1px solid var(--border-surface); padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+.dash .field:focus { border-color: var(--border-raised); }

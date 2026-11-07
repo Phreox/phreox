@@ -1,7 +1,12 @@
 import { Markdown } from "@app/components/Markdown.tsx";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, Fragment, useEffect, useState } from "react";
 import { call, type Me, type NewsPost, useLoad, useSession } from "../api.ts";
 import { defaults, type Widget, setDashSettings, useDashSettings, widgetNames } from "../dashSettings.ts";
+import { DashIcon } from "../dash/icons.tsx";
+import { Notes } from "../dash/Notes.tsx";
+import { Reports } from "../dash/Reports.tsx";
+import { Tickets } from "../dash/Tickets.tsx";
+import { Avatar, Card, Chip, Count, Heading, Th, useAction } from "../dash/ui.tsx";
 import { Reveal } from "../components/Reveal.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
@@ -12,38 +17,11 @@ type Audit = { id: string; at: number; actor: string; action: string; detail: st
 type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 
 type System = { startedAt: number; uptimeMillis: number; java: string; os: string; processors: number; heapUsed: number; heapMax: number; accounts: number; spaces: number; spaceMembers: number; spaceMessages: number; spaceInvites: number; bots: number; badgeGrants: number; mfaAccounts: number };
-type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; createdAt: number; updatedAt: number };
+type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt: number; level: number; createdAt: number; updatedAt: number };
 
-const tabs = ["overview", "accounts", "spaces", "roles", "news", "audit", "system", "settings"] as const;
+const tabs = ["overview", "reports", "tickets", "accounts", "spaces", "roles", "news", "audit", "system", "settings"] as const;
+type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number };
 type Tab = (typeof tabs)[number];
-
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`glass rounded-3xl p-6 ${className}`}>{children}</div>;
-}
-
-function Chip({ on, children, onClick, disabled }: { on: boolean; children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default ${on ? "bg-(--brand) border-(--brand) text-white" : "border-white/12 text-(--text-washed) hover:border-white/30"}`}>
-      {children}
-    </button>
-  );
-}
-
-function useAction() {
-  const [error, setError] = useState<string>();
-
-  async function run(action: () => Promise<unknown>) {
-    setError(undefined);
-
-    try {
-      await action();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure));
-    }
-  }
-
-  return { error, run };
-}
 
 // ---- second factor -------------------------------------------------------------------------------------------------
 
@@ -130,18 +108,7 @@ function megabytes(bytes: number) {
   return `${Math.round(bytes / 1_048_576)} MB`;
 }
 
-function Heading({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-(--text-dark)">{children}</h2>
-      {action}
-    </div>
-  );
-}
 
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <th className={`px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-(--text-dark) ${className}`}>{children}</th>;
-}
 
 function useRow() {
   const { density } = useDashSettings();
@@ -317,7 +284,27 @@ function RolesWidget({ tick, onMore }: { tick: number; onMore: () => void }) {
   );
 }
 
-function OverviewTab({ tick, go }: { tick: number; go: (tab: Tab) => void }) {
+function QueueWidget({ queue, go }: { queue?: Queue; go: (tab: Tab) => void }) {
+  const { t } = useT();
+  const rows: [string, number | undefined, Tab][] = [
+    [t("dash.ov.reportsOpen"), queue ? queue.reportsOpen + queue.reportsReview : undefined, "reports"],
+    [t("dash.ov.ticketsOpen"), queue?.ticketsOpen, "tickets"],
+    [t("dash.ov.mineWork"), queue ? queue.reportsMine + queue.ticketsMine : undefined, "tickets"],
+  ];
+
+  return (
+    <Card>
+      <Heading>{t("dash.ov.queue")}</Heading>
+      <ul className="flex flex-col divide-y divide-(--border-surface)">
+        {rows.map(([label, number, tab]) => (
+          <li key={label}><button type="button" className="flex w-full cursor-pointer items-center justify-between py-2.5 text-sm hover:text-white" onClick={() => go(tab)}><span className="text-(--text-washed)">{label}</span><span className={`text-2xl font-extrabold ${number ? "text-(--volt)" : "text-(--text-dark)"}`}>{number ?? "–"}</span></button></li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function OverviewTab({ tick, go, queue }: { tick: number; go: (tab: Tab) => void; queue?: Queue }) {
   const { t } = useT();
   const { widgets } = useDashSettings();
 
@@ -326,6 +313,7 @@ function OverviewTab({ tick, go }: { tick: number; go: (tab: Tab) => void }) {
       {widgets.stats && <div><Heading>{t("dash.w.stats")}</Heading><StatsWidget tick={tick} /></div>}
 
       <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+        {widgets.queue && <QueueWidget queue={queue} go={go} />}
         {widgets.accounts && <AccountsWidget tick={tick} onMore={() => go("accounts")} />}
         {widgets.spaces && <SpacesWidget tick={tick} onMore={() => go("spaces")} />}
         {widgets.audit && <AuditWidget tick={tick} onMore={() => go("audit")} />}
@@ -343,6 +331,7 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
   const cell = useRow();
   const [query, setQuery] = useState("");
   const [only, setOnly] = useState("");
+  const [notesFor, setNotesFor] = useState<string>();
   const catalog = useLoad(() => call<Catalog>("GET", "/admin/catalog"));
   const roles = useLoad(() => call<Role[]>("GET", "/admin/roles"));
   const rows = useLoad(() => call<Row[]>("GET", `/admin/accounts?query=${encodeURIComponent(query)}`), [query, tick]);
@@ -374,13 +363,14 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
       <div className="glass overflow-x-auto rounded-3xl">
         <table className="w-full min-w-[60rem] text-sm">
           <thead className="border-b border-white/8">
-            <tr><Th>{t("dash.acc.username")}</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.acc.mfa")}</Th><Th>{t("dash.acc.flags")}</Th><Th>{t("dash.acc.roles")}</Th>{badges.length > 0 && <Th>{t("dash.acc.badges")}</Th>}</tr>
+            <tr><Th>{t("dash.acc.username")}</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.acc.mfa")}</Th><Th>{t("dash.acc.flags")}</Th><Th>{t("dash.acc.roles")}</Th>{badges.length > 0 && <Th>{t("dash.acc.badges")}</Th>}<Th>{t("dash.notes.title")}</Th></tr>
           </thead>
           <tbody>
             {shown.map((row) => (
-              <tr key={row.id} className="border-b border-white/5 align-top last:border-0">
+              <Fragment key={row.id}>
+              <tr className="border-b border-white/5 align-top last:border-0">
                 <td className={cell}>
-                  <p className="font-semibold">{row.username}{row.id === me.id && <span className="ml-2 text-xs text-(--accent)">(du)</span>}</p>
+                  <p className="flex items-center gap-2 font-semibold"><Avatar name={row.username} size={22} />{row.username}{row.id === me.id && <span className="ml-2 text-xs text-(--accent)">(du)</span>}</p>
                   {ids && <p className="font-mono text-xs text-(--text-dark)">{row.id}</p>}
                 </td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.createdAt).toLocaleDateString(lang)}</td>
@@ -408,7 +398,10 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
                     ))}
                   </div>
                 </td>}
+                <td className={cell}><button type="button" className="cursor-pointer text-xs text-(--accent) hover:underline" onClick={() => setNotesFor(notesFor === row.id ? undefined : row.id)}>{notesFor === row.id ? t("common.cancel") : t("dash.notes.title")}</button></td>
               </tr>
+              {notesFor === row.id && <tr className="border-b border-white/5"><td colSpan={badges.length > 0 ? 7 : 6} className="bg-(--background-dark) px-4 py-4"><Notes accountId={row.id} me={me.username} /></td></tr>}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -434,7 +427,7 @@ function SpacesTab({ tick }: { tick: number }) {
       <div className="glass overflow-x-auto rounded-3xl">
         <table className="w-full min-w-[56rem] text-sm">
           <thead className="border-b border-white/8">
-            <tr><Th>{t("dash.sp.name")}</Th><Th>{t("dash.sp.owner")}</Th><Th>{t("dash.sp.visibility")}</Th><Th>{t("dash.sp.listed")}</Th><Th>{t("dash.sp.members")}</Th><Th>{t("dash.sp.channels")}</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.sp.updated")}</Th></tr>
+            <tr><Th>{t("dash.sp.name")}</Th><Th>{t("dash.sp.owner")}</Th><Th>{t("dash.sp.visibility")}</Th><Th>{t("dash.sp.listed")}</Th><Th>{t("dash.sp.members")}</Th><Th>{t("dash.sp.channels")}</Th><Th>Volt</Th><Th>{t("dash.acc.created")}</Th><Th>{t("dash.sp.updated")}</Th></tr>
           </thead>
           <tbody>
             {shown.map((row) => (
@@ -448,6 +441,7 @@ function SpacesTab({ tick }: { tick: number }) {
                 <td className={cell}>{row.listed ? "✓" : "–"}</td>
                 <td className={cell}>{row.members}</td>
                 <td className={cell}>{row.channels}</td>
+                <td className={cell}>{row.volt} · {t("dash.sp.level", { n: row.level })}</td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.createdAt).toLocaleDateString(lang)}</td>
                 <td className={`${cell} whitespace-nowrap text-(--text-washed)`}>{new Date(row.updatedAt).toLocaleString(lang)}</td>
               </tr>
@@ -620,7 +614,7 @@ function SystemTab({ tick }: { tick: number }) {
 function SettingsTab() {
   const { t } = useT();
   const settings = useDashSettings();
-  const widgetLabel: Record<Widget, TextKey> = { stats: "dash.w.stats", accounts: "dash.w.accounts", spaces: "dash.w.spaces", audit: "dash.w.audit", news: "dash.w.news", system: "dash.w.system", roles: "dash.w.roles" };
+  const widgetLabel: Record<Widget, TextKey> = { queue: "dash.ov.queue", stats: "dash.w.stats", accounts: "dash.w.accounts", spaces: "dash.w.spaces", audit: "dash.w.audit", news: "dash.w.news", system: "dash.w.system", roles: "dash.w.roles" };
   const choice = (on: boolean, label: string, onClick: () => void) => <Chip key={label} on={on} onClick={onClick}>{label}</Chip>;
 
   return (
@@ -671,18 +665,49 @@ function SettingsTab() {
 
 // ---- the page ------------------------------------------------------------------------------------------------------
 
-const tabIcons: Record<Tab, string> = { overview: "▦", accounts: "☺", spaces: "◍", roles: "⚑", news: "✎", audit: "☰", system: "⚙", settings: "✱" };
+const groups: { title: TextKey; tabs: Tab[] }[] = [
+  { title: "dash.group.platform", tabs: ["overview"] },
+  { title: "dash.group.support", tabs: ["reports", "tickets"] },
+  { title: "dash.group.manage", tabs: ["accounts", "spaces", "roles", "news"] },
+  { title: "dash.group.system", tabs: ["audit", "system", "settings"] },
+];
+const supportTabs: Tab[] = ["reports", "tickets"];
 
 export function Dashboard() {
   const { t, lang } = useT();
   const { me, reload } = useSession();
-  const [tab, setTab] = useState<Tab>(() => (tabs as readonly string[]).includes(location.hash.slice(1)) ? location.hash.slice(1) as Tab : "overview");
   const tick = useRefresh();
+  const [queue, setQueue] = useState<Queue>();
+  const [stamp, setStamp] = useState(0);
+  const isSuper = me?.flags.includes("super-admin") ?? false;
+  const isSupport = isSuper || (me?.flags.includes("support") ?? false);
+  // The support team sees the support desk; a super admin sees everything.
+  const allowed = (isSuper ? tabs : supportTabs) as readonly Tab[];
+  const [tab, setTab] = useState<Tab>(() => (tabs as readonly string[]).includes(location.hash.slice(1)) ? location.hash.slice(1) as Tab : "overview");
+  const current = allowed.includes(tab) ? tab : allowed[0]!;
+  const unlocked = Boolean(me?.mfaEnabled && me.elevated);
 
   function go(next: Tab) {
     setTab(next);
     history.replaceState(null, "", `#${next}`);
   }
+
+  // The counts next to Reports and Support: now, every 30 seconds, and after a change.
+  useEffect(() => {
+    if (!unlocked || !isSupport) return;
+
+    let live = true;
+    const load = () => call<Queue>("GET", "/admin/support/queue").then((value) => live && setQueue(value)).catch(() => undefined);
+
+    void load();
+
+    const timer = window.setInterval(load, 30_000);
+
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, [unlocked, isSupport, stamp, tick]);
 
   // The service asks for the second factor again once the 30 minutes are over: the page shows the code field again.
   useEffect(() => {
@@ -693,53 +718,83 @@ export function Dashboard() {
     return () => window.removeEventListener("phreox:relock", relock);
   }, [reload]);
 
-  if (!me?.flags.includes("super-admin")) {
+  if (!me || !isSupport) {
     return <section className="mx-auto max-w-xl px-4 pt-24 text-center text-(--text-washed)">{t("dash.noAccess")}</section>;
   }
 
-  const unlocked = me.mfaEnabled && me.elevated;
+  const count = (name: Tab) => name === "reports" ? (queue ? queue.reportsOpen + queue.reportsReview : 0) : name === "tickets" ? queue?.ticketsOpen ?? 0 : 0;
 
   return (
-    <section className="w-full px-4 pt-8 sm:px-6">
-      <Reveal className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{t("dash.title")}</h1>
-          <p className="mt-1 text-sm text-(--text-dark)">{me.username}</p>
-        </div>
-
-        {me.elevated && (
-          <p className="flex items-center gap-3 text-xs text-(--text-washed)">
-            {t("dash.mfa.until")} {new Date(me.elevatedUntil).toLocaleTimeString(lang)}
-            <button type="button" className="btn btn-ghost btn-small cursor-pointer" onClick={() => void call("POST", "/admin/mfa/lock").then(reload)}>{t("dash.mfa.lock")}</button>
-          </p>
-        )}
-      </Reveal>
-
-      {!me.mfaEnabled && <Setup onDone={() => void reload()} />}
-      {me.mfaEnabled && !me.elevated && <Verify onDone={() => void reload()} />}
-
-      {unlocked && (
-        <div className="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
-          <nav className="flex gap-1.5 overflow-x-auto lg:sticky lg:top-24 lg:h-fit lg:flex-col lg:overflow-visible" aria-label="Dashboard">
-            {tabs.map((name) => (
-              <button key={name} type="button" className={`flex shrink-0 cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors ${tab === name ? "bg-(--brand) text-white" : "glass text-(--text-washed) hover:text-white"}`} onClick={() => go(name)}>
-                <span aria-hidden className="w-4 text-center opacity-70">{tabIcons[name]}</span>{t(`dash.tab.${name}` as TextKey)}
-              </button>
-            ))}
-          </nav>
-
-          <div className="min-w-0 pb-4">
-            {tab === "overview" && <OverviewTab tick={tick} go={go} />}
-            {tab === "accounts" && <AccountsTab me={me} tick={tick} />}
-            {tab === "spaces" && <SpacesTab tick={tick} />}
-            {tab === "roles" && <RolesTab tick={tick} />}
-            {tab === "news" && <NewsTab tick={tick} />}
-            {tab === "audit" && <AuditTab tick={tick} />}
-            {tab === "system" && <SystemTab tick={tick} />}
-            {tab === "settings" && <SettingsTab />}
+    <section className="dash w-full px-3 pt-4 sm:px-4">
+      <div className="grid gap-3 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="flex flex-col gap-4 rounded-2xl border border-(--border-surface) bg-(--background-surface) p-3 lg:sticky lg:top-20 lg:h-[calc(100dvh-6.5rem)] lg:overflow-y-auto">
+          <div className="flex items-center gap-3 px-2 pt-1">
+            <Avatar name={me.username} size={36} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{me.username}</p>
+              <p className="text-xs text-(--text-dark)">{isSuper ? t("flag.super-admin") : t("flag.support")}</p>
+            </div>
           </div>
+
+          {unlocked
+            ? (
+              <nav className="flex flex-col gap-4" aria-label="Dashboard">
+                {groups.map((group, index) => {
+                  const list = group.tabs.filter((name) => allowed.includes(name));
+
+                  return list.length === 0 ? null : (
+                    <div key={index} className="flex flex-col gap-0.5">
+                      <p className="px-3 pb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-(--text-dark)">{t(group.title)}</p>
+                      {list.map((name) => (
+                        <button key={name} type="button" aria-current={current === name} className={`relative flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${current === name ? "bg-(--background-raised) font-semibold text-white" : "text-(--text-washed) hover:bg-(--background-panel) hover:text-white"}`} onClick={() => go(name)}>
+                          {current === name && <span aria-hidden className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-(--brand)" />}
+                          <DashIcon name={name} className="size-[1.1rem] shrink-0 opacity-80" />
+                          {t(`dash.tab.${name}` as TextKey)}
+                          <Count n={count(name)} />
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </nav>
+            )
+            : <p className="px-2 text-xs text-(--text-dark)">{t("dash.mfa.verifyTitle")}</p>}
+
+          {me.elevated && (
+            <div className="mt-auto flex flex-col gap-2 border-t border-(--border-surface) px-2 pt-3 text-xs text-(--text-dark)">
+              <p>{t("dash.mfa.until")} {new Date(me.elevatedUntil).toLocaleTimeString(lang)}</p>
+              <button type="button" className="w-fit cursor-pointer rounded-lg border border-(--border-panel) px-3 py-1 text-(--text-washed) hover:border-(--brand) hover:text-white" onClick={() => void call("POST", "/admin/mfa/lock").then(reload)}>{t("dash.mfa.lock")}</button>
+            </div>
+          )}
+        </aside>
+
+        <div className="min-w-0 pb-6">
+          {unlocked && (
+            <header className="mb-4 flex items-center gap-3">
+              <DashIcon name={current} className="size-6 text-(--accent)" />
+              <h1 className="text-2xl font-bold tracking-tight">{t(`dash.tab.${current}` as TextKey)}</h1>
+            </header>
+          )}
+
+          {!me.mfaEnabled && <Setup onDone={() => void reload()} />}
+          {me.mfaEnabled && !me.elevated && <Verify onDone={() => void reload()} />}
+
+          {unlocked && (
+            <>
+              {current === "overview" && <OverviewTab tick={tick} go={go} queue={queue} />}
+              {current === "reports" && <Reports me={me} tick={tick} onChange={() => setStamp((value) => value + 1)} />}
+              {current === "tickets" && <Tickets me={me} tick={tick} onChange={() => setStamp((value) => value + 1)} />}
+              {current === "accounts" && <AccountsTab me={me} tick={tick} />}
+              {current === "spaces" && <SpacesTab tick={tick} />}
+              {current === "roles" && <RolesTab tick={tick} />}
+              {current === "news" && <NewsTab tick={tick} />}
+              {current === "audit" && <AuditTab tick={tick} />}
+              {current === "system" && <SystemTab tick={tick} />}
+              {current === "settings" && <SettingsTab />}
+            </>
+          )}
         </div>
-      )}
+      </div>
     </section>
   );
 }

@@ -8,7 +8,7 @@ export function Layout() {
   const { t, lang } = useT();
   const { me, reload } = useSession();
   const link = ({ isActive }: { isActive: boolean }) => `rounded-lg px-3 py-2 text-[0.95rem] font-medium transition-colors ${isActive ? "text-white" : "text-(--text-washed) hover:text-white"}`;
-  const admin = me?.flags.includes("super-admin");
+  const admin = me?.flags.includes("super-admin") || me?.flags.includes("support");
   // The dashboard uses the whole width, the other pages a column.
   const wide = useLocation().pathname.startsWith("/dashboard");
   const width = wide ? "max-w-none sm:px-6" : "max-w-6xl";
