@@ -327,6 +327,10 @@ jobs:
         with:
           path: files
           merge-multiple: true
+      # The natives (libopus, PortAudio) are artifacts too and come down as folders (linux-x64/, windows-x64/, ...). They are inside the jars and the apps
+      # already; the release only gets the files.
+      - name: Only files go into the release
+        run: find files -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
       - name: Checksums
         working-directory: files
         run: sha256sum phreox-* > SHA256SUMS
@@ -343,7 +347,8 @@ jobs:
           if [[ "$PRERELEASE" == "true" ]]; then flags=(--prerelease); else flags=(--latest); fi
           notes="Channel: $CHANNEL
           Built from https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-          gh release create "$TAG" files/* -R "$RELEASES_REPO" --title "Phreox $TAG" --notes "$notes" "${flags[@]}"
+          mapfile -t assets < <(find files -maxdepth 1 -type f)
+          gh release create "$TAG" "${assets[@]}" -R "$RELEASES_REPO" --title "Phreox $TAG" --notes "$notes" "${flags[@]}"
 
   # Windows and macOS runners are scarce and can queue for a long time, so the release does not wait for them: the exe and the dmg
   # are added to the release when they are built (and listed in SHA256SUMS).
