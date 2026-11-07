@@ -228,6 +228,34 @@ jobs:
           if-no-files-found: error
           path: out/phreox-backend-*.jar
 
+  # The space node, for own servers and the self-updating Docker container (docker/space-node).
+  space:
+    needs: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: phreox-space.jar
+        run: |
+          mvn -B -q -pl phreox-space -am -DskipTests package
+          mkdir -p out
+          cp phreox-space/target/phreox-space.jar "out/phreox-space-${{ needs.plan.outputs.channel }}-${{ needs.plan.outputs.version }}.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: space
+          if-no-files-found: error
+          path: out/phreox-space-*.jar
+
   # The web version (phreox.talk): the built app and the small server that serves it. The egg "Phreox Web" takes this archive.
   web:
     needs: plan
@@ -261,7 +289,7 @@ jobs:
           path: out/phreox-web-*.tar.gz
 
   publish:
-    needs: [plan, desktop, android, service, backend, web]
+    needs: [plan, desktop, android, service, backend, space, web]
     runs-on: ubuntu-latest
     # A dev release replaces the previous one: only the newest commit may publish, an older run is cancelled by a newer one.
     concurrency:

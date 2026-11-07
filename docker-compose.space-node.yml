@@ -1,0 +1,34 @@
+# A space node on this machine that updates itself and stays up: `restart: unless-stopped` brings it back after a crash or a reboot
+# until somebody stops it. It takes the newest phreox-space release of its channel from the releases repository.
+#
+#   cp .env.example .env     # set the PHREOX_SPACE_* values and PHREOX_UPDATE_TOKEN
+#   docker compose -f docker-compose.space-node.yml up -d --build
+services:
+  space-node:
+    build:
+      context: .
+      dockerfile: docker/space-node/Dockerfile
+    restart: unless-stopped
+    environment:
+      PHREOX_UPDATE_CHANNEL: ${PHREOX_UPDATE_CHANNEL:-release}
+      PHREOX_UPDATE_REPO: ${PHREOX_UPDATE_REPO:-Phreox/releases}
+      PHREOX_UPDATE_TOKEN: ${PHREOX_UPDATE_TOKEN:-}
+      PHREOX_UPDATE_INTERVAL_SECONDS: ${PHREOX_UPDATE_INTERVAL_SECONDS:-600}
+      PHREOX_SPACE_PORT: ${PHREOX_SPACE_PORT:-8082}
+      PHREOX_SPACE_DATA_DIR: /data
+      PHREOX_SPACE_SERVICE_URL: ${PHREOX_SPACE_SERVICE_URL:-https://service.phreox.talk}
+      PHREOX_SPACE_PUBLIC_URL: ${PHREOX_SPACE_PUBLIC_URL:?set PHREOX_SPACE_PUBLIC_URL in .env, the address the apps reach this node at}
+      PHREOX_SPACE_USERNAME: ${PHREOX_SPACE_USERNAME:-space-node}
+      PHREOX_SPACE_PASSWORD: ${PHREOX_SPACE_PASSWORD:?set PHREOX_SPACE_PASSWORD in .env}
+      PHREOX_SPACE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
+    network_mode: host
+    volumes:
+      - phreox-space-node-data:/data
+      - phreox-space-node-app:/app
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  phreox-space-node-data:
+  phreox-space-node-app:

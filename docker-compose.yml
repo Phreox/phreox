@@ -22,6 +22,13 @@ services:
       PHREOX_SERVICE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
       # User names that are super admins of the global dashboard (they still need their second factor).
       PHREOX_SERVICE_SUPERADMINS: ${PHREOX_SERVICE_SUPERADMINS:-}
+      # Mail for the codes by email; without a host those features are off.
+      PHREOX_SMTP_HOST: ${PHREOX_SMTP_HOST:-}
+      PHREOX_SMTP_PORT: ${PHREOX_SMTP_PORT:-587}
+      PHREOX_SMTP_SECURITY: ${PHREOX_SMTP_SECURITY:-starttls}
+      PHREOX_SMTP_USER: ${PHREOX_SMTP_USER:-}
+      PHREOX_SMTP_PASSWORD: ${PHREOX_SMTP_PASSWORD:-}
+      PHREOX_SMTP_FROM: ${PHREOX_SMTP_FROM:-}
     network_mode: host
     volumes:
       - phreox-service-data:/data

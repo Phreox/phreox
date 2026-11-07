@@ -1,6 +1,6 @@
 #!/bin/bash
 # Brings the server of an egg to the newest release of its channel. Runs at installation and before every start, so a restart of
-# the server in the panel is an update. PHREOX_ARTIFACT says what is fetched: "backend" (phreox-backend-<channel>-<version>.jar,
+# the server in the panel is an update. PHREOX_ARTIFACT says what is fetched: "backend" or "space" (phreox-backend-<channel>-<version>.jar,
 # kept as phreox-backend.jar), "web" (phreox-web-<channel>-<version>.tar.gz, unpacked to web/) or "website" (phreox-website-<version>.tar.gz of the
 # release tag website-<version>, unpacked to web/; the website has no channels of its own). A failure keeps what is installed.
 set -uo pipefail
@@ -15,6 +15,7 @@ ARTIFACT="${PHREOX_ARTIFACT:?PHREOX_ARTIFACT is missing}"
 
 case "$ARTIFACT" in
   backend) extension=jar ;;
+  space)   extension=jar ;;
   web)     extension=tar.gz ;;
   website) extension=tar.gz ;;
   *) echo "Unknown artifact '$ARTIFACT'"; exit 1 ;;
@@ -72,8 +73,8 @@ if [[ -z "$expected" || "$expected" != "$actual" ]]; then
   exit 1
 fi
 
-if [[ "$ARTIFACT" == "backend" ]]; then
-  mv app/download.part phreox-backend.jar
+if [[ "$ARTIFACT" == "backend" || "$ARTIFACT" == "space" ]]; then
+  mv app/download.part "phreox-$ARTIFACT.jar"
 else
   rm -rf web.next && mkdir web.next
   tar -xzf app/download.part -C web.next || { rm -rf web.next app/download.part; echo "Archive cannot be unpacked"; exit 1; }

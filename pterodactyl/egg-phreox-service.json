@@ -99,6 +99,66 @@
       "field_type": "text"
     },
     {
+      "name": "SMTP host",
+      "description": "Mail server for the codes by email (confirming an address, signing in). Without it those features are off.",
+      "env_variable": "PHREOX_SMTP_HOST",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "SMTP port",
+      "description": "587 for STARTTLS, 465 for TLS.",
+      "env_variable": "PHREOX_SMTP_PORT",
+      "default_value": "587",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|integer|between:1,65535",
+      "field_type": "text"
+    },
+    {
+      "name": "SMTP security",
+      "description": "starttls, tls or none.",
+      "env_variable": "PHREOX_SMTP_SECURITY",
+      "default_value": "starttls",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|in:starttls,tls,none",
+      "field_type": "text"
+    },
+    {
+      "name": "SMTP user",
+      "description": "User name for the mail server (empty for none).",
+      "env_variable": "PHREOX_SMTP_USER",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "SMTP password",
+      "description": "Password for the mail server.",
+      "env_variable": "PHREOX_SMTP_PASSWORD",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "SMTP sender",
+      "description": "The address the mails come from, e.g. no-reply@phreox.talk.",
+      "env_variable": "PHREOX_SMTP_FROM",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255",
+      "field_type": "text"
+    },
+    {
       "name": "Klipy key",
       "description": "Klipy app key for the GIF search. Without it the service offers no GIFs.",
       "env_variable": "PHREOX_KLIPY_KEY",

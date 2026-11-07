@@ -15,6 +15,7 @@
         <module>phreox-backend</module>
         <module>phreox-service</module>
         <module>phreox-space</module>
+        <module>phreox-bot-sdk</module>
     </modules>
 
     <properties>
