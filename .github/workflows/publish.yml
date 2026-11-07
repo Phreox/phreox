@@ -69,8 +69,69 @@ jobs:
             } | tee -a "$GITHUB_OUTPUT"
           fi
 
+  # libopus 1.6.1 (our own build, the one with DRED) and PortAudio for every platform. Windows and macOS have neither, so without these the sound of a
+  # voice channel does not work there. The backend jar of every job below carries them (see phreox-backend/natives/build.sh).
+  natives:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux, arch: x64, shell: bash }
+          - { os: ubuntu-24.04-arm, name: linux, arch: arm64, shell: bash }
+          - { os: windows-latest, name: windows, arch: x64, shell: "msys2 {0}" }
+          - { os: macos-26, name: macos, arch: arm64, shell: bash }
+          - { os: macos-26, name: macos, arch: x64, shell: bash }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULES_TOKEN || github.token }}
+      - name: MSYS2
+        if: matrix.name == 'windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            make
+            curl
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+      - name: ALSA headers
+        if: matrix.name == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev cmake
+      - name: Build libopus and PortAudio
+        env:
+          # MSYS2 has its own folders; the default of the script would point into the Windows temp folder.
+          NATIVES_WORK: /tmp/phreox-natives-${{ matrix.name }}-${{ matrix.arch }}
+        run: bash phreox-backend/natives/build.sh "${{ matrix.name }}" "${{ matrix.arch }}"
+      # The gate of docs/audio-specs.md section 2: the library that was just built has to load and pass the probe (version, DRED, deep PLC) on the machine it
+      # was built for. macOS x64 is built on an arm64 machine and cannot run here.
+      - uses: actions/setup-java@v4
+        if: matrix.name != 'macos' || matrix.arch == 'arm64'
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Gate, the built libopus loads and passes the probe
+        if: matrix.name != 'macos' || matrix.arch == 'arm64'
+        shell: bash
+        env:
+          PHREOX_REQUIRE_NATIVES: "1"
+        run: mvn -B -q -pl phreox-backend -am test -Dtest=OpusNativeTest -Dsurefire.failIfNoSpecifiedTests=false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natives-${{ matrix.name }}-${{ matrix.arch }}
+          if-no-files-found: error
+          path: phreox-backend/src/main/resources/natives
+
   desktop:
-    needs: plan
+    needs: [plan, natives]
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +155,12 @@ jobs:
         with:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
+      - name: libopus and PortAudio of every platform
+        uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: phreox-backend/src/main/resources/natives
       - name: Backend jar and the Java runtime that ships with the app
         run: |
           mvn -B -q -pl phreox-backend -am -DskipTests package
@@ -202,7 +269,7 @@ jobs:
           path: out/phreox-service-*.jar
 
   backend:
-    needs: plan
+    needs: [plan, natives]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -217,6 +284,12 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
+      - name: libopus and PortAudio of every platform
+        uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: phreox-backend/src/main/resources/natives
       - name: phreox-backend.jar
         run: |
           mvn -B -q -pl phreox-backend -am -DskipTests package
@@ -327,7 +400,7 @@ jobs:
   # Windows and macOS runners are scarce and can queue for a long time, so the release does not wait for them: the exe and the dmg
   # are added to the release when they are built (and listed in SHA256SUMS).
   desktop-win:
-    needs: [plan, publish]
+    needs: [plan, publish, natives]
     runs-on: windows-latest
     timeout-minutes: 40
     defaults:
@@ -349,6 +422,12 @@ jobs:
         with:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
+      - name: libopus and PortAudio of every platform
+        uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: phreox-backend/src/main/resources/natives
       - name: Backend jar and the Java runtime that ships with the app
         run: |
           mvn -B -q -pl phreox-backend -am -DskipTests package
@@ -388,7 +467,7 @@ jobs:
           exit 1
 
   desktop-mac:
-    needs: [plan, publish]
+    needs: [plan, publish, natives]
     runs-on: macos-26
     timeout-minutes: 40
     defaults:
@@ -410,6 +489,12 @@ jobs:
         with:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
+      - name: libopus and PortAudio of every platform
+        uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: phreox-backend/src/main/resources/natives
       - name: Backend jar and the Java runtime that ships with the app
         run: |
           mvn -B -q -pl phreox-backend -am -DskipTests package
