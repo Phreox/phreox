@@ -5,6 +5,7 @@ import { defaults, type Widget, setDashSettings, useDashSettings, widgetNames } 
 import { DashIcon } from "../dash/icons.tsx";
 import { AccountManager } from "../dash/AccountManager.tsx";
 import { Creator } from "../dash/Creator.tsx";
+import { Cluster } from "../dash/Cluster.tsx";
 import { Database } from "../dash/Database.tsx";
 import { Reports } from "../dash/Reports.tsx";
 import { Tickets } from "../dash/Tickets.tsx";
@@ -21,7 +22,7 @@ type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 type System = { startedAt: number; uptimeMillis: number; java: string; os: string; processors: number; heapUsed: number; heapMax: number; accounts: number; spaces: number; spaceMembers: number; spaceMessages: number; spaceInvites: number; bots: number; badgeGrants: number; mfaAccounts: number };
 type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt?: number; level?: number; createdAt: number; updatedAt: number };
 
-const tabs = ["overview", "reports", "tickets", "creator", "accounts", "spaces", "roles", "news", "audit", "database", "system", "settings"] as const;
+const tabs = ["overview", "reports", "tickets", "creator", "accounts", "spaces", "roles", "news", "audit", "database", "cluster", "system", "settings"] as const;
 type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number; decorationsPending?: number };
 type Standing = { accountId: string; status: "" | "suspended" | "banned"; warnings: number };
 type Tab = (typeof tabs)[number];
@@ -676,7 +677,7 @@ const groups: { title: TextKey; tabs: Tab[] }[] = [
   { title: "dash.group.platform", tabs: ["overview"] },
   { title: "dash.group.support", tabs: ["reports", "tickets", "creator"] },
   { title: "dash.group.manage", tabs: ["accounts", "spaces", "roles", "news"] },
-  { title: "dash.group.system", tabs: ["audit", "database", "system", "settings"] },
+  { title: "dash.group.system", tabs: ["audit", "database", "cluster", "system", "settings"] },
 ];
 const supportTabs: Tab[] = ["reports", "tickets", "creator"];
 
@@ -798,6 +799,7 @@ export function Dashboard() {
               {current === "news" && <NewsTab tick={tick} />}
               {current === "audit" && <AuditTab tick={tick} />}
               {current === "database" && <Database tick={tick} />}
+              {current === "cluster" && <Cluster tick={tick} />}
               {current === "system" && <SystemTab tick={tick} />}
               {current === "settings" && <SettingsTab />}
             </>
