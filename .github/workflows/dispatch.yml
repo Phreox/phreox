@@ -1,10 +1,10 @@
-# The workflows that build and release Phreox live in https://github.com/Phreox/workflows (which has this repository as a submodule). This one only tells it that something was pushed:
+# The workflows that build and release Phreox live in https://github.com/Phreox/workflows (which has this repository as a submodule). This one only starts them when something was pushed:
 #
-#   push of the main branch               ->  event `phreox`          (a dev release of the apps)
-#   tag 1.2.3, 1.2.3-beta.N, -alpha.N ... ->  event `phreox`          (a release of the apps)
-#   tag website-1.2.3                     ->  event `phreox-website`  (a release of the website)
+#   push of the main branch               ->  publish.yml there  (a dev release of the apps)
+#   tag 1.2.3, 1.2.3-beta.N, -alpha.N ... ->  publish.yml there  (a release of the apps)
+#   tag website-1.2.3                     ->  website.yml there  (a release of the website)
 #
-# Secret: WORKFLOWS_TOKEN, a token that may start workflows in Phreox/workflows (a fine-grained token with "Contents: read and write" on that repository).
+# Secret: WORKFLOWS_TOKEN, a token that may start workflows in Phreox/workflows: a fine-grained token with "Actions: read and write" on that repository (nothing more).
 name: dispatch
 
 on:
@@ -30,11 +30,12 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           if [[ -z "$GH_TOKEN" ]]; then
-            echo "::error::The secret WORKFLOWS_TOKEN is not set. Make a fine-grained token with 'Contents: read and write' on Phreox/workflows and add it under Settings > Secrets and variables > Actions of this repository."
+            echo "::error::The secret WORKFLOWS_TOKEN is not set. Make a fine-grained token with 'Actions: read and write' on Phreox/workflows and add it under Settings > Secrets and variables > Actions of this repository."
             exit 1
           fi
 
-          if [[ "$TYPE" == tag && "$REF" == website-* ]]; then event=phreox-website; else event=phreox; fi
-          jq -n --arg event "$event" --arg ref "$REF" --arg type "$TYPE" --arg sha "$SHA" \
-            '{event_type: $event, client_payload: {ref: $ref, ref_type: $type, sha: $sha}}' \
-            | gh api repos/Phreox/workflows/dispatches --method POST --input -
+          if [[ "$TYPE" == tag && "$REF" == website-* ]]; then
+            gh workflow run website.yml -R Phreox/workflows --ref master -f version="${REF#website-}" -f ref="$SHA" -f sha="$SHA"
+          else
+            gh workflow run publish.yml -R Phreox/workflows --ref master -f ref="$REF" -f ref_type="$TYPE" -f sha="$SHA"
+          fi
