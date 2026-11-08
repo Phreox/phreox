@@ -29,6 +29,11 @@ jobs:
           TYPE: ${{ github.ref_type }}
           SHA: ${{ github.sha }}
         run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::The secret WORKFLOWS_TOKEN is not set. Make a fine-grained token with 'Contents: read and write' on Phreox/workflows and add it under Settings > Secrets and variables > Actions of this repository."
+            exit 1
+          fi
+
           if [[ "$TYPE" == tag && "$REF" == website-* ]]; then event=phreox-website; else event=phreox; fi
           jq -n --arg event "$event" --arg ref "$REF" --arg type "$TYPE" --arg sha "$SHA" \
             '{event_type: $event, client_payload: {ref: $ref, ref_type: $type, sha: $sha}}' \
