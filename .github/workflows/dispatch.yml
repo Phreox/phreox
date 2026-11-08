@@ -1,0 +1,35 @@
+# The workflows that build and release Phreox live in https://github.com/Phreox/workflows (which has this repository as a submodule). This one only tells it that something was pushed:
+#
+#   push of the main branch               ->  event `phreox`          (a dev release of the apps)
+#   tag 1.2.3, 1.2.3-beta.N, -alpha.N ... ->  event `phreox`          (a release of the apps)
+#   tag website-1.2.3                     ->  event `phreox-website`  (a release of the website)
+#
+# Secret: WORKFLOWS_TOKEN, a token that may start workflows in Phreox/workflows (a fine-grained token with "Contents: read and write" on that repository).
+name: dispatch
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
+      - "website-[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  tell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tell Phreox/workflows
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+          REF: ${{ github.ref_name }}
+          TYPE: ${{ github.ref_type }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [[ "$TYPE" == tag && "$REF" == website-* ]]; then event=phreox-website; else event=phreox; fi
+          jq -n --arg event "$event" --arg ref "$REF" --arg type "$TYPE" --arg sha "$SHA" \
+            '{event_type: $event, client_payload: {ref: $ref, ref_type: $type, sha: $sha}}' \
+            | gh api repos/Phreox/workflows/dispatches --method POST --input -
