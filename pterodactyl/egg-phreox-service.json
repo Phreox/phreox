@@ -99,6 +99,46 @@
       "field_type": "text"
     },
     {
+      "name": "Cluster key",
+      "description": "Only for several services next to each other: the secret they all share, at least 32 characters, the same on every one. Empty for a single server. Also copy service.key and mls.key into the data directory of every service before its first start.",
+      "env_variable": "PHREOX_CLUSTER_KEY",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": true,
+      "rules": "nullable|string|min:32|max:255",
+      "field_type": "text"
+    },
+    {
+      "name": "Cluster address",
+      "description": "Only with a cluster key: the address the other services reach this one at, with http:// or https:// and the port, no path (e.g. https://eu1.phreox.talk or http://10.0.0.5:5010).",
+      "env_variable": "PHREOX_CLUSTER_URL",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:255|regex:/^https?:\\/\\/[^\\/\\s]+$/",
+      "field_type": "text"
+    },
+    {
+      "name": "Cluster peers",
+      "description": "Only with a cluster key: addresses of other services to start from, comma separated. One is enough, the others are learned from it. The one with the existing data starts first.",
+      "env_variable": "PHREOX_CLUSTER_PEERS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:1000",
+      "field_type": "text"
+    },
+    {
+      "name": "Cluster weight",
+      "description": "Only with a cluster key: how much this server can take compared to the others. 2 means twice as many users as a server with 1.",
+      "env_variable": "PHREOX_CLUSTER_WEIGHT",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|numeric|min:0.1|max:100",
+      "field_type": "text"
+    },
+    {
       "name": "SMTP host",
       "description": "Mail server for the codes by email (confirming an address, signing in). Without it those features are off.",
       "env_variable": "PHREOX_SMTP_HOST",

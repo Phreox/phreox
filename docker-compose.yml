@@ -22,6 +22,11 @@ services:
       PHREOX_SERVICE_ADMIN_TOKEN: ${PHREOX_SERVICE_ADMIN_TOKEN:-}
       # User names that are super admins of the global dashboard (they still need their second factor).
       PHREOX_SERVICE_SUPERADMINS: ${PHREOX_SERVICE_SUPERADMINS:-}
+      # Several services next to each other (docs/CLUSTER.md). Without a key this is a single server.
+      PHREOX_CLUSTER_KEY: ${PHREOX_CLUSTER_KEY:-}
+      PHREOX_CLUSTER_URL: ${PHREOX_CLUSTER_URL:-}
+      PHREOX_CLUSTER_PEERS: ${PHREOX_CLUSTER_PEERS:-}
+      PHREOX_CLUSTER_WEIGHT: ${PHREOX_CLUSTER_WEIGHT:-1}
       # Mail for the codes by email; without a host those features are off.
       PHREOX_SMTP_HOST: ${PHREOX_SMTP_HOST:-}
       PHREOX_SMTP_PORT: ${PHREOX_SMTP_PORT:-587}
