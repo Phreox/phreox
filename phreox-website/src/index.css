@@ -19,6 +19,7 @@
     --lilac: #c9b9ff;
     --paper: #f4f0ff;
     --volt: #ffd84a;
+    --header: #0b0b12;
 
     /* The theme of the app, so that the pictures of the app on this site look like the app. */
     --app-bg: #0b0b12;
@@ -128,3 +129,166 @@
 .dash .btn-small { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 .dash .field { border-radius: 0.75rem; background: var(--background-dark); border: 1px solid var(--border-surface); padding: 0.5rem 0.75rem; font-size: 0.875rem; }
 .dash .field:focus { border-color: var(--border-raised); }
+
+/* The public pages are bright: white, blurple, soft pastels. The dashboard and the pictures of the app stay dark. */
+.site {
+  color-scheme: light;
+  --header: #ffffff;
+  --paper: #f2f3ff;
+  --violet: #5865f2;
+  --violet-deep: #4752c4;
+  --text-default: #1e1f26;
+  --text-washed: #4a4d5c;
+  --text-dark: #6b6f82;
+  background: #fff;
+  color: var(--text-default);
+}
+.site .btn { border-radius: 999px; box-shadow: none; }
+.site .btn-primary { background: var(--violet); box-shadow: 0 8px 20px -8px rgb(88 101 242 / 0.7); }
+.site .btn-primary:hover { background: #4752c4; }
+.site .btn-primary:active { box-shadow: none; transform: none; }
+.site .btn-ghost { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 0.12); }
+.site .btn-ghost:hover { background: var(--paper); }
+.site .btn-light { background: #fff; color: #23272f; box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.35); }
+.site :focus-visible { outline-color: var(--violet); }
+.site ::selection { background: var(--violet); color: #fff; }
+
+.app-dark {
+  color-scheme: dark; color: #f3f3f9;
+  --violet: #835afc; --violet-deep: #5b34d6; --lilac: #c9b9ff;
+  --text-default: #f3f3f9; --text-washed: #c2c4d6; --text-dark: #8e91aa;
+}
+
+.hero-bg { background: radial-gradient(120% 90% at 80% 0%, #7983f5 0%, #5865f2 45%, #4752c4 100%); }
+.float { animation: float 7s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-14px) rotate(var(--r, 0deg)); } }
+.lift { transition: transform 200ms ease, box-shadow 200ms ease; }
+.lift:hover { transform: translateY(-4px); box-shadow: 0 24px 50px -24px rgb(88 101 242 / 0.5); }
+
+/* Dark mode of the public pages. */
+.site.night {
+  color-scheme: dark;
+  --header: #14151c;
+  --paper: #23253a;
+  --violet-deep: #aab2ff;
+  --text-default: #f3f4fb;
+  --text-washed: #c4c7da;
+  --text-dark: #8f93ab;
+  background: #14151c;
+  color: var(--text-default);
+}
+.site.night .border-black\/10, .site.night .border-black\/8 { border-color: rgb(255 255 255 / 0.1); }
+.site.night .divide-black\/10 > :not(:last-child) { border-color: rgb(255 255 255 / 0.1); }
+.site.night .btn-ghost { background: #23253a; color: #fff; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.14); }
+.site.night .btn-ghost:hover { background: #2e3150; }
+.site.night .bg-\[\#e3f4ff\], .site.night .bg-\(--paper\) { background-color: #1d2033; color: #f3f4fb; }
+.site.night .text-\(--ink\) { color: #f3f4fb; }
+.site.night .bg-\(--volt\) .text-\(--ink\), .site.night .bg-\(--volt\) { color: #14151c; }
+.site.night .hero-bg { background: radial-gradient(120% 90% at 80% 0%, #4a54c8 0%, #353ea3 50%, #1f2266 100%); }
+.site.night .hover\:bg-\(--paper\):hover { background-color: #23253a; }
+
+/* Motion: scroll reveals, cursor glow, press feedback. */
+.inview { opacity: 0; transform: translateY(28px) scale(0.98); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 700ms cubic-bezier(.2,.7,.2,1); }
+.inview.seen { opacity: 1; transform: none; }
+.glow { position: relative; overflow: hidden; }
+.glow::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 250ms; background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgb(88 101 242 / 0.22), transparent 60%); }
+.glow:hover::before { opacity: 1; }
+.site .btn:active { transform: scale(0.97); }
+.pill { position: absolute; inset-block: 4px; border-radius: 999px; background: var(--violet); box-shadow: 0 6px 16px -6px rgb(88 101 242 / 0.8); transition: left 350ms cubic-bezier(.3,.8,.3,1), width 350ms cubic-bezier(.3,.8,.3,1); }
+.skeleton { background: linear-gradient(90deg, rgb(127 127 160 / 0.12) 25%, rgb(127 127 160 / 0.26) 50%, rgb(127 127 160 / 0.12) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; border-radius: 1.5rem; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.pop { animation: pop 450ms cubic-bezier(.3,1.4,.5,1); }
+@keyframes pulse-ring { to { box-shadow: 0 0 0 14px rgb(88 101 242 / 0); } }
+.pulse { box-shadow: 0 0 0 0 rgb(88 101 242 / 0.5); animation: pulse-ring 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .inview { opacity: 1; transform: none; } }
+.inview.seen.lift:hover, .lift:hover > .glow { transform: translateY(-4px); }
+.inview.seen.lift { transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 250ms ease, box-shadow 200ms ease; }
+.site.night .bg-white\/60 { background-color: rgb(255 255 255 / 0.04); }
+.site.night .bg-black\/5 { background-color: rgb(255 255 255 / 0.08); }
+.site.night .bg-black\/10 { background-color: rgb(255 255 255 / 0.14); }
+.plan-page { animation: arrive 450ms cubic-bezier(.2,.7,.2,1) both; }
+
+/* ECHO SHIFT keeps the shell live while only the content surface changes. */
+@property --echo-front { syntax: '<percentage>'; inherits: false; initial-value: -12%; }
+:root { --echo-x: 50%; --echo-y: 0px; --echo-ease: cubic-bezier(.22,.68,.24,1); }
+.site-header { view-transition-name: site-header; }
+.scroll-top-orb { view-transition-name: scroll-top-orb; }
+::view-transition { pointer-events: none; }
+::view-transition-group(*) { animation-duration: 720ms; animation-timing-function: var(--echo-ease); }
+::view-transition-old(root),
+::view-transition-old(site-header),
+::view-transition-old(scroll-top-orb) { display: none; }
+::view-transition-new(root),
+::view-transition-group(site-header),
+::view-transition-new(site-header),
+::view-transition-group(scroll-top-orb),
+::view-transition-new(scroll-top-orb) { animation: none; }
+::view-transition-group(site-header) { z-index: 10; }
+::view-transition-image-pair(echo-content) { isolation: isolate; }
+::view-transition-old(echo-content), ::view-transition-new(echo-content) {
+  mix-blend-mode: normal;
+  transform-origin: var(--echo-x) var(--echo-y);
+}
+::view-transition-old(echo-content) {
+  z-index: 2;
+  mask-image: radial-gradient(circle at var(--echo-x) var(--echo-y), transparent calc(var(--echo-front) - 10%), #000 var(--echo-front));
+  animation: echo-out 720ms var(--echo-ease) both;
+}
+::view-transition-new(echo-content) {
+  z-index: 1;
+  mask-image: radial-gradient(circle at var(--echo-x) var(--echo-y), #000 calc(var(--echo-front) - 10%), transparent var(--echo-front));
+  animation: echo-in 720ms var(--echo-ease) both;
+}
+@keyframes echo-out {
+  0% { --echo-front: -12%; transform: scale(1); opacity: 1; filter: blur(0); }
+  16.67% { --echo-front: -12%; transform: scale(.985); box-shadow: inset 0 0 0 1px rgb(88 101 242 / .15); filter: blur(.3px); }
+  32% { transform: scale(.985) skewX(.25deg); filter: blur(1.2px); opacity: .9; }
+  44.44%, 100% { --echo-front: 150%; transform: scale(.985); opacity: 0; filter: blur(2px); }
+}
+@keyframes echo-in {
+  0%, 16.67% { --echo-front: -12%; transform: scale(.985) translateY(6px); opacity: 0; filter: blur(1px); }
+  44.44% { --echo-front: 150%; transform: scale(.995) translateY(5px); opacity: 1; filter: blur(.3px); }
+  76.39% { --echo-front: 150%; transform: scale(1) translateY(4px); filter: blur(0); box-shadow: inset 0 24px 80px -72px rgb(88 101 242 / .14); }
+  100% { --echo-front: 150%; transform: none; opacity: 1; filter: none; box-shadow: none; }
+}
+.echo-content .arrive { animation: none; opacity: 1; transform: none; }
+.echo-content .plan-page { animation: none; }
+.echo-ambient { position: absolute; inset: 0 0 auto; height: min(380px, 50vh); pointer-events: none; view-transition-name: echo-ambient; }
+::view-transition-group(echo-ambient) { animation: none; }
+::view-transition-old(echo-ambient) { display: none; }
+::view-transition-new(echo-ambient) {
+  background: linear-gradient(105deg, transparent 25%, rgb(88 101 242 / .08) 50%, transparent 75%);
+  animation: echo-ambient 720ms var(--echo-ease) both;
+}
+@keyframes echo-ambient {
+  0%, 76.39% { opacity: 0; transform: translateX(-12%); }
+  88% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(12%); }
+}
+/* The heading establishes the large form before the lead and the shared CTA settle. */
+::view-transition-old(.echo-heading), ::view-transition-old(.echo-lead) { animation: echo-detail-out 320ms var(--echo-ease) both; }
+::view-transition-new(.echo-heading) { animation: echo-detail-in 400ms var(--echo-ease) 320ms both; }
+::view-transition-new(.echo-lead) { animation: echo-detail-in 320ms var(--echo-ease) 400ms both; }
+::view-transition-group(echo-download) { animation-duration: 720ms; }
+::view-transition-old(echo-download) { animation: echo-detail-out 320ms var(--echo-ease) both; }
+::view-transition-new(echo-download) { animation: echo-detail-in 240ms var(--echo-ease) 480ms both; }
+@keyframes echo-detail-out { 0%, 37.5% { opacity: 1; } 100% { opacity: 0; filter: blur(1px); } }
+@keyframes echo-detail-in { from { opacity: 0; transform: translateY(5px); filter: blur(.6px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
+    animation: none !important; mask-image: none !important; filter: none !important; transform: none !important;
+  }
+  ::view-transition-old(*), ::view-transition-new(echo-ambient) { display: none; }
+}
+
+/* Small things. */
+.site { transition: background-color 400ms ease, color 400ms ease; }
+.site footer a { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat; transition: background-size 300ms ease, color 200ms; }
+.site footer a:hover { background-size: 100% 1.5px; }
+.btn > svg:last-child:not(:first-child) { transition: transform 200ms ease; }
+.btn:hover > svg:last-child:not(:first-child) { transform: translateX(4px); }
+.btn > svg:first-child:not(:last-child) { transition: transform 200ms ease; }
+.btn:hover > svg:first-child:not(:last-child) { transform: translateY(2px) scale(1.1); }
+html { scroll-behavior: smooth; }
+.site .btn-primary[style*="box-shadow"]:hover { filter: brightness(1.06); }

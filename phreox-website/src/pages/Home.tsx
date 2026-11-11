@@ -1,13 +1,33 @@
 import { Link } from "react-router";
-import { call, type NewsPost, useLoad } from "../api.ts";
+import { call, type Channel, type NewsPost, useLoad } from "../api.ts";
+import { Glow, InView } from "../components/InView.tsx";
+import { PlansTeaser } from "./Info.tsx";
 import { Icon, type IconName } from "../components/Icons.tsx";
 import { AppWindow, Ripples, RolesMock, VoiceMock, VoltMock } from "../components/Mock.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
+const names = { windows: "Windows", macos: "macOS", linux: "Linux", android: "Android" } as const;
+
+/** The primary hero button: downloads the latest stable build for this system when there is one, otherwise it links to the download page. */
+function HeroDownload() {
+  const { t } = useT();
+  const { value } = useLoad(() => call<Partial<Record<"release", Channel>>>("GET", "/releases"));
+  const agent = navigator.userAgent;
+  const own = /Android/i.test(agent) ? "android" : /Mac/i.test(agent) ? "macos" : /Win/i.test(agent) ? "windows" : "linux";
+  const asset = value?.release?.assets.find((item) => item.platform === own);
+
+  return (
+    <Link to="/download" className="btn text-lg bg-[#23272f] text-white hover:bg-black">
+      <Icon name={asset ? own : "download"} className="size-5" />
+      {asset ? `${t("dl.get")} · ${names[own]}${value?.release ? ` ${value.release.version}` : ""}` : t("hero.ctaDownload")}
+    </Link>
+  );
+}
+
 const tones = {
   violet: "bg-(--violet) text-white",
   paper: "bg-(--paper) text-(--ink)",
-  night: "bg-(--night) text-white ring-1 ring-white/8",
+  night: "bg-[#e3f4ff] text-(--ink)",
   volt: "bg-(--volt) text-(--ink)",
 } as const;
 
@@ -16,8 +36,8 @@ function Stage({ tone, title, text, points = [], flip = false, children }: { ton
   const { t } = useT();
 
   return (
-    <section className={`relative overflow-hidden rounded-[2rem] p-6 sm:rounded-[2.75rem] sm:p-10 lg:p-14 ${tones[tone]}`}>
-      {tone === "night" && <Ripples className="pointer-events-none absolute -right-52 -bottom-52 w-[44rem] opacity-70" color="var(--volt)" />}
+    <InView as="section" className={`relative overflow-hidden rounded-[2rem] p-6 lift sm:rounded-[2.75rem] sm:p-10 lg:p-14 ${tones[tone]}`}>
+      {tone === "night" && <Ripples className="pointer-events-none absolute -right-52 -bottom-52 w-[44rem] opacity-70" color="var(--violet)" />}
 
       <div className="relative grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <div className={flip ? "lg:order-2" : ""}>
@@ -32,9 +52,9 @@ function Stage({ tone, title, text, points = [], flip = false, children }: { ton
           )}
         </div>
 
-        <div className={flip ? "lg:order-1" : ""}>{children}</div>
+        <div className={`app-dark rounded-3xl ${flip ? "lg:order-1" : ""}`}>{children}</div>
       </div>
-    </section>
+    </InView>
   );
 }
 
@@ -46,10 +66,10 @@ function Latest() {
   if (posts.length === 0) return null;
 
   return (
-    <section className="mx-auto mt-28 max-w-6xl px-5">
+    <section className="mx-auto mt-28 max-w-[84rem] px-5">
       <div className="flex items-end justify-between gap-4">
         <h2 className="display text-[clamp(2.2rem,5vw,3.75rem)]">{t("news.latest")}</h2>
-        <Link to="/news" className="font-semibold text-(--lilac) hover:underline">{t("news.more")}</Link>
+        <Link to="/news" className="font-semibold text-(--violet-deep) hover:underline">{t("news.more")}</Link>
       </div>
 
       <ul className="mt-8 divide-y divide-white/10 border-y border-white/10">
@@ -58,7 +78,7 @@ function Latest() {
             <Link to={`/news/${post.id}`} className="group grid gap-1 py-6 sm:grid-cols-[10rem_1fr] sm:gap-8">
               <time className="text-sm text-(--text-dark) sm:pt-1.5" dateTime={new Date(post.createdAt).toISOString()}>{new Date(post.createdAt).toLocaleDateString(lang, { day: "numeric", month: "long", year: "numeric" })}</time>
               <span>
-                <span className="display block text-2xl transition-colors group-hover:text-(--lilac) sm:text-3xl">{post.title}</span>
+                <span className="display block text-2xl transition-colors group-hover:text-(--violet-deep) sm:text-3xl">{post.title}</span>
                 <span className="mt-2 block max-w-2xl text-(--text-washed) line-clamp-2">{post.body.replace(/[*_~`>|#]/g, "")}</span>
               </span>
             </Link>
@@ -77,32 +97,51 @@ const places: { icon: IconName; name: TextKey | "browser"; to: string }[] = [
   { icon: "globe", name: "browser", to: "https://phreox.talk" },
 ];
 
+const features: IconName[] = ["chat", "spaces", "roles", "voice", "bolt", "globe"];
+const colors = ["#5865f2", "#eb459f", "#3ba55d", "#f0a020", "#7a5af8", "#0ea5e9"];
+
 export function Home() {
   const { t } = useT();
 
   return (
     <>
-      <section className="relative overflow-hidden">
-        <Ripples className="pointer-events-none absolute -top-72 -right-72 w-[60rem] opacity-60 sm:-right-56" />
+      <section className="hero-bg relative overflow-hidden text-white">
+        <Ripples className="pointer-events-none absolute -top-72 -right-72 w-[60rem] opacity-40 sm:-right-56" color="#fff" />
+        <div className="float pointer-events-none absolute top-24 left-[6%] hidden size-16 rounded-full bg-(--volt) sm:block" style={{ ["--r" as string]: "0deg" }} />
+        <div className="float pointer-events-none absolute top-1/2 right-[8%] hidden size-12 rotate-12 rounded-2xl bg-[#57f287] sm:block" style={{ ["--r" as string]: "12deg", animationDelay: "-2s" }} />
+        <div className="float pointer-events-none absolute bottom-40 left-[3%] hidden size-10 rounded-xl bg-[#eb459f] sm:block" style={{ ["--r" as string]: "-10deg", animationDelay: "-4s" }} />
 
-        <div className="relative mx-auto max-w-6xl px-5 pt-14 sm:pt-24">
+        <div className="relative mx-auto max-w-[84rem] px-5 pt-14 pb-24 sm:pt-24">
           <h1 className="display text-[clamp(3.6rem,11vw,9rem)]">
-            {t("hero.title1")}<br /><span className="text-(--lilac)">{t("hero.title2")}</span>
+            {t("hero.title1")}<br /><span className="text-(--volt)">{t("hero.title2")}</span>
           </h1>
 
-          <p className="mt-8 max-w-xl text-lg text-(--text-washed) sm:text-xl">{t("hero.text")}</p>
+          <p className="mt-8 max-w-xl text-lg text-white/90 sm:text-xl">{t("hero.text")}</p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <a href="https://phreox.talk" className="btn btn-primary text-lg">{t("hero.cta")}<Icon name="arrow" className="size-5" /></a>
-            <Link to="/download" className="btn btn-ghost text-lg"><Icon name="download" className="size-5" />{t("hero.ctaDownload")}</Link>
+            <a href="https://phreox.talk" className="btn btn-light text-lg">{t("hero.cta")}<Icon name="arrow" className="size-5" /></a>
+            <HeroDownload />
           </div>
-          <p className="mt-4 text-sm text-(--text-dark)">{t("hero.note")}</p>
+          <p className="mt-4 text-sm text-white/75">{t("hero.note")}</p>
 
-          <div className="mt-14"><AppWindow /></div>
+          <div className="app-dark mt-14 rounded-3xl shadow-[0_50px_100px_-30px_rgb(0_0_0/0.55)]"><AppWindow /></div>
         </div>
       </section>
 
-      <div className="mx-auto mt-28 flex max-w-6xl flex-col gap-6 px-5">
+      <section className="mx-auto mt-24 max-w-[84rem] px-5">
+        <h2 className="display text-center text-[clamp(2.4rem,5.5vw,4.5rem)]">{t("feat.title")}</h2>
+        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((icon, index) => (
+            <InView as="li" key={icon} delay={(index % 3) * 90}><Glow className="lift h-full rounded-3xl border border-black/10 bg-(--paper) p-7">
+              <span className="flex size-14 items-center justify-center rounded-2xl text-white" style={{ background: colors[index] }}><Icon name={icon} className="size-8" /></span>
+              <h3 className="display mt-5 text-3xl">{t(`feat.${index}.t` as TextKey)}</h3>
+              <p className="mt-2 text-(--text-washed)">{t(`feat.${index}.d` as TextKey)}</p>
+            </Glow></InView>
+          ))}
+        </ul>
+      </section>
+
+      <div className="mx-auto mt-28 flex max-w-[84rem] flex-col gap-6 px-5">
         <Stage tone="violet" title="spaces.title" text="spaces.text" points={["spaces.p1", "spaces.p2", "spaces.p3"]}>
           <SpacesPicture />
         </Stage>
@@ -120,9 +159,11 @@ export function Home() {
         </Stage>
       </div>
 
+      <PlansTeaser />
+
       <Latest />
 
-      <section className="mx-auto mt-28 grid max-w-6xl gap-10 px-5 lg:grid-cols-2 lg:gap-16">
+      <section className="mx-auto mt-28 grid max-w-[84rem] gap-10 px-5 lg:grid-cols-2 lg:gap-16">
         <div>
           <h2 className="display text-[clamp(2.4rem,5.5vw,4.5rem)]">{t("where.title")}</h2>
           <p className="mt-5 max-w-[34rem] text-lg text-(--text-washed)">{t("where.text")}</p>
@@ -132,7 +173,7 @@ export function Home() {
           {places.map((place) => {
             const inner = (
               <>
-                <Icon name={place.icon} className="size-6 text-(--lilac)" />
+                <Icon name={place.icon} className="size-6 text-(--violet-deep)" />
                 <span className="display flex-1 text-2xl">{place.name === "browser" ? t("nav.openApp") : t(place.name)}</span>
                 <Icon name="arrow" className="size-5 opacity-0 transition-opacity group-hover:opacity-100" />
               </>
@@ -149,7 +190,7 @@ export function Home() {
         </ul>
       </section>
 
-      <section className="mx-auto mt-28 max-w-6xl px-5">
+      <section className="mx-auto mt-28 max-w-[84rem] px-5">
         <div className="relative overflow-hidden rounded-[2rem] bg-(--violet) p-8 sm:rounded-[3rem] sm:p-16">
           <Ripples className="pointer-events-none absolute -right-40 top-1/2 w-[40rem] -translate-y-1/2 opacity-60" color="#fff" />
 

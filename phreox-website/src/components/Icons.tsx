@@ -1,3 +1,5 @@
+import { solar } from "./solar.ts";
+
 const paths = {
   spaces: "M4 5h6v6H4V5Zm10 0h6v6h-6V5ZM4 13h6v6H4v-6Zm10 3a3 3 0 1 1 6 0 3 3 0 0 1-6 0Z",
   roles: "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm0 5 1.6 3.3 3.6.5-2.6 2.5.6 3.6L12 15l-3.2 1.9.6-3.6-2.6-2.5 3.6-.5L12 7Z",
@@ -22,12 +24,16 @@ const paths = {
   lock: "M12 2a5 5 0 0 0-5 5v3H5v12h14V10h-2V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3H9Z",
 } as const;
 
-export type IconName = keyof typeof paths;
+export type IconName = keyof typeof paths | "sparkles" | "book" | "users" | "rocket" | "palette" | "fire" | "star" | "shop" | "coin";
 
-export function Icon({ name, className = "size-5" }: { name: IconName; className?: string }) {
+export function Icon({ name, className = "size-5", style }: { name: IconName; className?: string; style?: React.CSSProperties }) {
+  const body = name !== "megaphone" ? solar[name] : undefined;
+
+  if (body) return <svg viewBox="0 0 24 24" fill="none" className={className} style={style} aria-hidden="true" dangerouslySetInnerHTML={{ __html: body }} />;
+
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d={paths[name]} />
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={style} aria-hidden="true">
+      <path d={paths[name as keyof typeof paths]} />
     </svg>
   );
 }

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { call, type Asset, type Channel, useLoad } from "../api.ts";
 import { Icon } from "../components/Icons.tsx";
+import { Glow, InView } from "../components/InView.tsx";
+import { VerifyGuide } from "./Extras.tsx";
 import { Ripples } from "../components/Mock.tsx";
 import { type TextKey, useT } from "../i18n.ts";
 
@@ -25,10 +27,61 @@ function mine(): Asset["platform"] {
   return "linux";
 }
 
+function Copy({ text }: { text: string }) {
+  const { t } = useT();
+  const [done, setDone] = useState(false);
+
+  return (
+    <button type="button" className="cursor-pointer rounded-full bg-black/5 px-3 py-1 text-xs font-semibold transition hover:bg-black/10 active:scale-95" onClick={() => { void navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1600); }}>
+      {done ? <span className="pop inline-block text-emerald-600">✓ {t("dl.copied")}</span> : t("dl.copy")}
+    </button>
+  );
+}
+
 function Checksum({ asset }: { asset: Asset }) {
   const { t } = useT();
 
-  return asset.sha256 ? <details className="text-xs text-(--text-dark)"><summary className="cursor-pointer hover:text-(--text-washed)">{t("dl.checksum")}</summary><code className="mt-1 block break-all select-all">{asset.sha256}</code></details> : null;
+  if (!asset.sha256) return null;
+
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs text-(--text-dark)">
+      <span className="font-semibold">{t("dl.checksum")}</span>
+      <code className="min-w-0 flex-1 truncate select-all">{asset.sha256}</code>
+      <Copy text={asset.sha256} />
+    </div>
+  );
+}
+
+/** A button that confirms the click, so the user sees that something happens. */
+function Get({ asset, light = false }: { asset: Asset; light?: boolean }) {
+  const { t } = useT();
+  const [started, setStarted] = useState(false);
+
+  return (
+    <a href={asset.url} download className={`btn ${light ? "btn-light" : "btn-primary"} text-lg`} onClick={() => { setStarted(true); setTimeout(() => setStarted(false), 3000); }}>
+      {started ? <><Icon name="check" className="pop size-5" />{t("dl.started")}</> : <><Icon name="download" className="size-5" />{t("dl.get")} · {size(asset.size)}</>}
+    </a>
+  );
+}
+
+function Segmented({ value, onChange }: { value: ChannelName; onChange: (name: ChannelName) => void }) {
+  const { t } = useT();
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [box, setBox] = useState({ left: 4, width: 0 });
+
+  useEffect(() => {
+    const node = refs.current[value];
+    if (node) setBox({ left: node.offsetLeft, width: node.offsetWidth });
+  }, [value]);
+
+  return (
+    <div role="group" className="relative mt-8 inline-flex rounded-full bg-(--paper) p-1 ring-1 ring-black/5">
+      <span className="pill" style={{ left: box.left, width: box.width }} />
+      {tabs.map((name) => (
+        <button key={name} ref={(node) => { refs.current[name] = node; }} type="button" aria-pressed={value === name} onClick={() => onChange(name)} className={`relative z-10 cursor-pointer rounded-full px-6 py-2 font-semibold transition-colors ${value === name ? "text-white" : "text-(--text-washed) hover:text-(--ink)"}`}>{t(`dl.${name}` as TextKey)}</button>
+      ))}
+    </div>
+  );
 }
 
 export function Download() {
@@ -36,63 +89,74 @@ export function Download() {
   const { value, error } = useLoad(() => call<Channels>("GET", "/releases"));
   const [tab, setTab] = useState<ChannelName>("release");
   const channel = value?.[tab];
-  const own = channel?.assets.find((asset) => asset.platform === mine());
-  const others = (channel?.assets ?? []).filter((asset) => asset !== own).sort((a, b) => order.indexOf(a.platform) - order.indexOf(b.platform));
+  const own = mine();
+  const byPlatform = (platform: Asset["platform"]) => channel?.assets.find((asset) => asset.platform === platform);
+  const main = byPlatform(own);
 
   return (
     <div className="relative overflow-hidden">
-      <Ripples className="pointer-events-none absolute -top-60 -right-60 w-[48rem] opacity-50" />
+      <Ripples className="pointer-events-none absolute -top-60 -right-60 w-[48rem] opacity-40" />
 
-      <section className="relative mx-auto max-w-4xl px-5 pt-16 sm:pt-24">
-        <h1 className="display text-[clamp(3rem,9vw,6.5rem)]">{t("dl.title")}</h1>
+      <section className="relative mx-auto max-w-[84rem] px-5 pt-16 sm:pt-24">
+        <h1 className="display text-[clamp(3rem,9vw,7rem)]">{t("dl.title")}</h1>
+        <p className="mt-4 max-w-2xl text-lg text-(--text-washed)">{t("dl.subtitle")}</p>
 
-        <div role="group" className="mt-10 inline-flex rounded-2xl bg-white/7 p-1">
-          {tabs.map((name) => (
-            <button key={name} type="button" aria-pressed={tab === name} onClick={() => setTab(name)} className={`cursor-pointer rounded-xl px-5 py-2 font-semibold transition-colors ${tab === name ? "bg-(--violet) text-white" : "text-(--text-washed) hover:text-white"}`}>{t(`dl.${name}` as TextKey)}</button>
-          ))}
-        </div>
+        <Segmented value={tab} onChange={setTab} />
         <p className="mt-3 text-(--text-washed)">{t(`dl.note.${tab}` as TextKey)}</p>
 
-        <div className="mt-10">
-          {error && <p role="alert" className="text-red-400">{t("common.error")}</p>}
-          {!value && !error && <p className="text-(--text-dark)">{t("common.loading")}</p>}
-          {value && !channel && <p className="max-w-xl text-lg text-(--text-washed)">{t("dl.none")}</p>}
+        {error && <p role="alert" className="mt-10 text-red-600">{t("common.error")}</p>}
+        {!value && !error && <div className="mt-10 grid gap-5 lg:grid-cols-[1.4fr_1fr]"><div className="skeleton h-72" /><div className="skeleton h-72" /></div>}
+        {value && !channel && <p className="mt-10 max-w-xl text-lg text-(--text-washed)">{t("dl.none")}</p>}
 
-          {channel && (
-            <>
-              {own && (
-                <div className="rounded-[2rem] bg-(--violet) p-6 sm:p-10">
-                  <p className="flex items-center gap-3 text-lg font-medium text-white/85"><Icon name={own.platform} className="size-6" />{t("dl.for")} {t(`platform.${own.platform}` as TextKey)}</p>
-                  <a href={own.url} download className="btn btn-light mt-5 text-lg"><Icon name="download" className="size-5" />{t("dl.get")} · {size(own.size)}</a>
-                  <p className="mt-5 text-sm text-white/80">{t("dl.version")} <span className="font-mono">{channel.version}</span> · {t("dl.published")} {new Date(channel.publishedAt).toLocaleDateString(lang)}</p>
-                  <div className="mt-2 text-white/70 [&_*]:text-white/70"><Checksum asset={own} /></div>
-                </div>
-              )}
+        {channel && (
+          <div className="mt-10 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+            <div className="hero-bg relative overflow-hidden rounded-[2.25rem] p-8 text-white shadow-[0_30px_70px_-30px_rgb(88_101_242/0.8)] sm:p-12">
+              <Ripples className="pointer-events-none absolute -right-24 -bottom-24 w-[28rem] opacity-40" color="#fff" />
+              <div className="relative">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold"><span className="size-2 rounded-full bg-[#57f287]" />{t("dl.recommended")}</span>
+                <p className="display mt-5 flex items-center gap-4 text-[clamp(2.6rem,6vw,4.5rem)]"><Icon name={own} className="size-14" />{t(`platform.${own}` as TextKey)}</p>
+                <p className="mt-3 text-white/85">{t("dl.version")} <span className="font-mono">{channel.version}</span> · {t("dl.published")} {new Date(channel.publishedAt).toLocaleDateString(lang)}</p>
+                <div className="mt-7">{main ? <Get asset={main} light /> : <span className="btn bg-white/20 text-white">{t("dl.unavailable")}</span>}</div>
+                {main?.sha256 && <div className="mt-5 text-white/80 [&_button]:bg-white/20 [&_button]:text-white [&_*]:text-white/80"><Checksum asset={main} /></div>}
+              </div>
+            </div>
 
-              {!own && <p className="mb-4 text-sm text-(--text-dark)">{t("dl.version")} <span className="font-mono text-(--text-washed)">{channel.version}</span> · {t("dl.published")} {new Date(channel.publishedAt).toLocaleDateString(lang)}</p>}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+              <Glow className="rounded-[2.25rem] border border-black/10 bg-(--paper) p-7">
+                <p className="display text-3xl">{t("dl.web")}</p>
+                <p className="mt-1 text-(--text-washed)">{t("dl.webText")}</p>
+                <a href="https://phreox.talk" className="btn btn-primary mt-5"><Icon name="globe" className="size-5" />{t("nav.openApp")}</a>
+              </Glow>
+              <Glow className="rounded-[2.25rem] border border-black/10 bg-(--paper) p-7">
+                <p className="display text-3xl">{t("dl.verify")}</p>
+                <p className="mt-1 text-(--text-washed)">SHA-256 · {t("dl.published")} {new Date(channel.publishedAt).toLocaleDateString(lang)}</p>
+              </Glow>
+            </div>
+          </div>
+        )}
 
-              {others.length > 0 && (
-                <>
-                  <h2 className="display mt-12 text-3xl">{t("dl.other")}</h2>
-                  <ul className="mt-4 divide-y divide-white/10 border-y border-white/10">
-                    {others.map((asset) => (
-                      <li key={asset.name} className="flex flex-wrap items-center gap-x-5 gap-y-2 py-4">
-                        <Icon name={asset.platform} className="size-6 text-(--lilac)" />
-                        <div className="min-w-0 flex-1"><p className="font-semibold">{t(`platform.${asset.platform}` as TextKey)}</p><p className="truncate text-sm text-(--text-dark)">{asset.name} · {size(asset.size)}</p><Checksum asset={asset} /></div>
-                        <a href={asset.url} download className="btn btn-ghost btn-small"><Icon name="download" className="size-4" />{t("dl.get")}</a>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </>
-          )}
-        </div>
+        {channel && (
+          <>
+            <h2 className="display mt-16 text-4xl">{t("dl.other")}</h2>
+            <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {order.map((platform, index) => {
+                const asset = byPlatform(platform);
 
-        <div className="mt-16 flex flex-col items-start justify-between gap-4 rounded-[2rem] bg-white/6 p-6 sm:flex-row sm:items-center sm:p-8">
-          <div><h2 className="display text-3xl">{t("dl.web")}</h2><p className="mt-1 text-(--text-washed)">{t("dl.webText")}</p></div>
-          <a href="https://phreox.talk" className="btn btn-primary"><Icon name="globe" className="size-5" />{t("nav.openApp")}</a>
-        </div>
+                return (
+                  <InView as="li" key={`${tab}-${platform}`} delay={index * 80}>
+                    <Glow className={`lift h-full rounded-3xl border p-6 ${platform === own ? "border-(--violet) bg-(--paper)" : "border-black/10 bg-(--paper)"} ${asset ? "" : "opacity-55"}`}>
+                      <span className="flex size-14 items-center justify-center rounded-2xl bg-(--violet) text-white"><Icon name={platform} className="size-8" /></span>
+                      <p className="display mt-4 text-3xl">{t(`platform.${platform}` as TextKey)}</p>
+                      <p className="mt-1 truncate text-sm text-(--text-dark)">{asset ? `${asset.name} · ${size(asset.size)}` : t("dl.unavailable")}</p>
+                      {asset && <a href={asset.url} download className="btn btn-ghost btn-small mt-4"><Icon name="download" className="size-4" />{t("dl.get")}</a>}
+                      {asset && <Checksum asset={asset} />}
+                    </Glow>
+                  </InView>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </section>
     </div>
   );
