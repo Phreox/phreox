@@ -407,7 +407,7 @@ function AccountsTab({ me, tick }: { me: Me; tick: number }) {
                 </td>}
                 <td className={cell}><button type="button" className="cursor-pointer text-xs text-(--accent) hover:underline" onClick={() => setManage(manage === row.id ? undefined : row.id)}>{manage === row.id ? t("common.cancel") : t("dash.acct.manage")}</button></td>
               </tr>
-              {manage === row.id && <tr className="border-b border-white/5"><td colSpan={badges.length > 0 ? 7 : 6} className="bg-(--background-panel) px-4 py-4"><AccountManager accountId={row.id} me={me} /></td></tr>}
+              {manage === row.id && <tr className="border-b border-white/5"><td colSpan={badges.length > 0 ? 7 : 6} className="bg-(--background-panel) px-4 py-4"><AccountManager accountId={row.id} me={me} onDeleted={() => { setManage(undefined); rows.reload(); }} /></td></tr>}
               </Fragment>
             ))}
           </tbody>

@@ -146,14 +146,56 @@ function ProfileTab({ detail, reload }: { detail: Detail; reload: () => void }) 
   );
 }
 
+function DeleteAccountTab({ detail, onDeleted }: { detail: Detail; onDeleted?: () => void }) {
+  const { t } = useT();
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const { error, run } = useAction();
+  const cleanCode = code.replace(/\D/g, "").slice(0, 6);
+  const canDelete = password.length > 0 && cleanCode.length === 6;
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!canDelete) return;
+
+    void run(async () => {
+      await call("POST", `/admin/accounts/${detail.id}/delete`, { password, code: cleanCode });
+      onDeleted?.();
+    });
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-[#ee0333]/30 bg-(--background-dark) p-4">
+      <p className="text-sm text-[#ff7a93]">{t("dash.acct.deleteWarn", { name: detail.username })}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-xs text-(--text-dark)">
+          {t("dash.acct.deletePassword")}
+          <input type="password" className={inputClass} value={password} autoComplete="current-password" onChange={(event) => setPassword(event.target.value)} />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-(--text-dark)">
+          {t("dash.acct.deleteCode")}
+          <input type="text" inputMode="numeric" maxLength={6} className={`${inputClass} font-mono tracking-widest`} placeholder="000000" value={cleanCode} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button type="submit" kind="danger" disabled={!canDelete}>{t("dash.acct.deleteAction")}</Button>
+      </div>
+      <ErrorLine error={error} />
+    </form>
+  );
+}
+
 /** One account for the team: what was done about it, its name and profile, the notes about it. */
-export function AccountManager({ accountId, me }: { accountId: string; me: Me }) {
+export function AccountManager({ accountId, me, onDeleted }: { accountId: string; me: Me; onDeleted?: () => void }) {
   const { t, lang } = useT();
-  const [tab, setTab] = useState<"mod" | "profile" | "notes">("mod");
+  const [tab, setTab] = useState<"mod" | "profile" | "notes" | "delete">("mod");
   const detail = useLoad(() => call<Detail>("GET", `/admin/support/accounts/${accountId}`), [accountId]);
   const value = detail.value;
 
   if (!value) return <p className="text-sm text-(--text-dark)">{detail.error ?? t("common.loading")}</p>;
+
+  const canDelete = me.flags.includes("super-admin") && value.id !== me.id;
+  const managerTabs = canDelete ? (["mod", "profile", "notes", "delete"] as const) : (["mod", "profile", "notes"] as const);
 
   return (
     <div className="flex flex-col gap-4">
@@ -170,12 +212,13 @@ export function AccountManager({ accountId, me }: { accountId: string; me: Me })
       {value.standing !== "" && <p className="rounded-xl bg-[#ee0333]/10 px-3 py-2 text-sm text-[#ff7a93]">{value.standingReason}</p>}
 
       <div className="flex gap-1.5">
-        {(["mod", "profile", "notes"] as const).map((name) => <Button key={name} small kind={tab === name ? "primary" : "ghost"} onClick={() => setTab(name)}>{t(`dash.acct.${name}` as TextKey)}</Button>)}
+        {managerTabs.map((name) => <Button key={name} small kind={tab === name ? (name === "delete" ? "danger" : "primary") : "ghost"} onClick={() => setTab(name)}>{t(`dash.acct.${name}` as TextKey)}</Button>)}
       </div>
 
       {tab === "mod" && <Moderation detail={value} me={me} reload={detail.reload} />}
       {tab === "profile" && <ProfileTab key={`${value.username}${value.profile?.length}`} detail={value} reload={detail.reload} />}
       {tab === "notes" && <Notes accountId={value.id} me={me.username} />}
+      {tab === "delete" && canDelete && <DeleteAccountTab detail={value} onDeleted={onDeleted} />}
     </div>
   );
 }
