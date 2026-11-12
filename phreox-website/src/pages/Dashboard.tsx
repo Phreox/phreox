@@ -22,7 +22,7 @@ type Catalog = { flags: string[]; categories: string[]; badges: string[] };
 type System = { startedAt: number; uptimeMillis: number; java: string; os: string; processors: number; heapUsed: number; heapMax: number; accounts: number; spaces: number; spaceMembers: number; spaceMessages: number; spaceInvites: number; bots: number; badgeGrants: number; mfaAccounts: number };
 type SpaceRow = { id: string; name: string; ownerId: string; owner: string; visibility: string; listed: boolean; applicationsOpen: boolean; members: number; channels: number; volt?: number; level?: number; createdAt: number; updatedAt: number };
 
-const tabs = ["overview", "reports", "tickets", "creator", "accounts", "spaces", "roles", "news", "audit", "database", "cluster", "system", "settings"] as const;
+const tabs = ["overview", "reports", "tickets", "creator", "accounts", "testers", "spaces", "roles", "news", "audit", "database", "cluster", "system", "settings"] as const;
 type Queue = { reportsOpen: number; reportsReview: number; ticketsOpen: number; ticketsMine: number; reportsMine: number; decorationsPending?: number };
 type Standing = { accountId: string; status: "" | "suspended" | "banned"; warnings: number };
 type Tab = (typeof tabs)[number];
@@ -497,6 +497,152 @@ function RolesTab({ tick }: { tick: number }) {
   );
 }
 
+type RegToken = { id: string; createdBy: string; note: string; maxUses: number; uses: number; expiresAt: number; revoked: boolean; createdAt: number };
+type CreatedToken = { id: string; token: string; maxUses: number; expiresAt: number; note: string };
+
+const ttlOptions: { seconds: number; key: TextKey }[] = [
+  { seconds: 0, key: "dash.tok.never" },
+  { seconds: 86400, key: "dash.tok.day" },
+  { seconds: 604800, key: "dash.tok.week" },
+  { seconds: 2592000, key: "dash.tok.month" },
+];
+
+function TestersTab({ tick }: { tick: number }) {
+  return (
+    <div className="flex flex-col gap-8">
+      <TokensSection tick={tick} />
+      <TesterSection tick={tick} />
+    </div>
+  );
+}
+
+function TokensSection({ tick }: { tick: number }) {
+  const { t, lang } = useT();
+  const tokens = useLoad(() => call<RegToken[]>("GET", "/admin/registration-tokens"), [tick]);
+  const [maxUses, setMaxUses] = useState(1);
+  const [ttl, setTtl] = useState(0);
+  const [note, setNote] = useState("");
+  const [created, setCreated] = useState<CreatedToken>();
+  const { error, run } = useAction();
+
+  function statusOf(token: RegToken): TextKey {
+    if (token.revoked) return "dash.tok.status.revoked";
+    if (token.expiresAt && Date.now() >= token.expiresAt) return "dash.tok.status.expired";
+    if (token.uses >= token.maxUses) return "dash.tok.status.used";
+    return "dash.tok.status.active";
+  }
+
+  return (
+    <section className="grid gap-6 xl:grid-cols-3">
+      <Card className="flex h-fit flex-col gap-4">
+        <Heading>{t("dash.tok.title")}</Heading>
+        <p className="text-sm text-(--text-dark)">{t("dash.tok.hint")}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-xs text-(--text-washed)">{t("dash.tok.maxUses")}
+            <input type="number" className="field" min={1} max={10000} value={maxUses} onChange={(event) => setMaxUses(Number(event.target.value))} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-(--text-washed)">{t("dash.tok.ttl")}
+            <select className="field" value={ttl} onChange={(event) => setTtl(Number(event.target.value))}>
+              {ttlOptions.map((option) => <option key={option.seconds} value={option.seconds}>{t(option.key)}</option>)}
+            </select>
+          </label>
+        </div>
+        <input className="field" placeholder={t("dash.tok.note")} value={note} maxLength={120} onChange={(event) => setNote(event.target.value)} />
+        {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+        <button type="button" disabled={maxUses < 1} className="btn btn-primary btn-small cursor-pointer disabled:opacity-50" onClick={() => void run(async () => {
+          const result = await call<CreatedToken>("POST", "/admin/registration-tokens", { maxUses, ttlSeconds: ttl, note });
+          setCreated(result);
+          setNote("");
+          tokens.reload();
+        })}>{t("dash.tok.create")}</button>
+        {created && (
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-(--text-washed)">{t("dash.tok.created")}</p>
+            <code className="mt-2 block break-all font-mono text-sm">{created.token}</code>
+            <button type="button" className="btn btn-ghost btn-small mt-2 cursor-pointer" onClick={() => void navigator.clipboard.writeText(created.token)}>{t("dash.tok.copy")}</button>
+          </div>
+        )}
+      </Card>
+
+      <div className="flex flex-col gap-3 xl:col-span-2">
+        {tokens.value?.length === 0 && <p className="text-(--text-washed)">{t("dash.tok.none")}</p>}
+        {tokens.value?.map((token) => (
+          <Card key={token.id} className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">{token.note || "—"}</p>
+              <p className="text-xs text-(--text-dark)">
+                {new Date(token.createdAt).toLocaleString(lang)} · {t("dash.tok.uses", { used: token.uses, max: token.maxUses })} · {token.expiresAt ? new Date(token.expiresAt).toLocaleString(lang) : t("dash.tok.never")}
+              </p>
+            </div>
+            <span className="text-sm">{t(statusOf(token))}</span>
+            {!token.revoked && (
+              <button type="button" className="cursor-pointer text-sm text-red-400 hover:underline" onClick={() => {
+                if (confirm(t("dash.tok.confirmRevoke"))) void run(async () => {
+                  await call("DELETE", `/admin/registration-tokens/${token.id}`);
+                  tokens.reload();
+                });
+              }}>{t("dash.tok.revoke")}</button>
+            )}
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TesterSection({ tick }: { tick: number }) {
+  const { t } = useT();
+  const everyone = useLoad(() => call<Row[]>("GET", "/admin/accounts?query="), [tick]);
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<Row[]>();
+  const { error, run } = useAction();
+  const testers = (everyone.value ?? []).filter((row) => (row.badges ?? []).includes("tester"));
+
+  async function search() {
+    setFound(await call<Row[]>("GET", `/admin/accounts?query=${encodeURIComponent(query.trim())}`));
+  }
+
+  return (
+    <section className="grid gap-6 xl:grid-cols-2">
+      <Card className="flex h-fit flex-col gap-4">
+        <Heading>{t("dash.tester.title")}</Heading>
+        <p className="text-sm text-(--text-dark)">{t("dash.tester.hint")}</p>
+        <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void run(search); }}>
+          <input className="field" placeholder={t("dash.tester.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
+          <button type="submit" className="btn btn-ghost btn-small cursor-pointer">{t("dash.tester.search")}</button>
+        </form>
+        {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+        {found?.map((row) => (
+          <div key={row.id} className="flex items-center justify-between gap-3">
+            <span>{row.username}</span>
+            {(row.badges ?? []).includes("tester")
+              ? <span className="text-xs text-(--text-dark)">{t("dash.tester.isTester")}</span>
+              : <button type="button" className="btn btn-primary btn-small cursor-pointer" onClick={() => void run(async () => {
+                  await call("PUT", `/admin/accounts/${row.id}/badges/tester`);
+                  everyone.reload();
+                  await search();
+                })}>{t("dash.tester.make")}</button>}
+          </div>
+        ))}
+      </Card>
+
+      <Card className="flex h-fit flex-col gap-3">
+        <Heading>{t("dash.tester.list")}</Heading>
+        {testers.length === 0 && <p className="text-(--text-washed)">{t("dash.tester.none")}</p>}
+        {testers.map((row) => (
+          <div key={row.id} className="flex items-center justify-between gap-3">
+            <span>{row.username}</span>
+            <button type="button" className="cursor-pointer text-sm text-red-400 hover:underline" onClick={() => void run(async () => {
+              await call("DELETE", `/admin/accounts/${row.id}/badges/tester`);
+              everyone.reload();
+            })}>{t("dash.tester.remove")}</button>
+          </div>
+        ))}
+      </Card>
+    </section>
+  );
+}
+
 function NewsTab({ tick }: { tick: number }) {
   const { t, lang } = useT();
   const catalog = useLoad(() => call<Catalog>("GET", "/admin/catalog"));
@@ -676,7 +822,7 @@ function SettingsTab() {
 const groups: { title: TextKey; tabs: Tab[] }[] = [
   { title: "dash.group.platform", tabs: ["overview"] },
   { title: "dash.group.support", tabs: ["reports", "tickets", "creator"] },
-  { title: "dash.group.manage", tabs: ["accounts", "spaces", "roles", "news"] },
+  { title: "dash.group.manage", tabs: ["accounts", "testers", "spaces", "roles", "news"] },
   { title: "dash.group.system", tabs: ["audit", "database", "cluster", "system", "settings"] },
 ];
 const supportTabs: Tab[] = ["reports", "tickets", "creator"];
@@ -797,6 +943,7 @@ export function Dashboard() {
               {current === "spaces" && <SpacesTab tick={tick} />}
               {current === "roles" && <RolesTab tick={tick} />}
               {current === "news" && <NewsTab tick={tick} />}
+              {current === "testers" && <TestersTab tick={tick} />}
               {current === "audit" && <AuditTab tick={tick} />}
               {current === "database" && <Database tick={tick} />}
               {current === "cluster" && <Cluster tick={tick} />}
