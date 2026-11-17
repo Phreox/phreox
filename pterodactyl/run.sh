@@ -10,7 +10,19 @@ set -uo pipefail
 cd "$(dirname "$0")"
 
 interval="${PHREOX_UPDATE_SECONDS:-30}"
-command="$*"
+
+# The panel's images start the egg's command through `env`, which knows no shell syntax (no quotes, no `exec`, no assignments in front of
+# a program), so the egg only says which artifact to run (bash run.sh space) and the command lives here. The single quotes keep the
+# variables for the shell that starts the server, where the panel's variables and SERVER_PORT exist.
+# A first argument that is not an artifact is still taken as the whole command, as the older eggs gave it.
+case "${1:-${PHREOX_ARTIFACT:-}}" in
+  backend) artifact=backend; command='PHREOX_BRIDGE_PORT=${SERVER_PORT} PHREOX_DATA_DIR=/home/container/data exec java ${PHREOX_JAVA_OPTS} -jar phreox-backend.jar' ;;
+  space)   artifact=space;   command='PHREOX_SPACE_HOST=0.0.0.0 PHREOX_SPACE_PORT=${SERVER_PORT} PHREOX_SPACE_DATA_DIR=/home/container/data exec java ${PHREOX_JAVA_OPTS} -jar phreox-space.jar' ;;
+  web)     artifact=web;     command='exec node web/server.mjs' ;;
+  website) artifact=website; command='PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) exec node web/server.mjs' ;;
+  *)       artifact="${PHREOX_ARTIFACT:-}"; command="$*" ;;
+esac
+export PHREOX_ARTIFACT="$artifact"
 child=0
 stopping=0
 

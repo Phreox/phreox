@@ -110,7 +110,7 @@ write("egg-phreox-backend.json", {
     "features": None,
     "docker_images": {"Java 25": "ghcr.io/pterodactyl/yolks:java_25"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=backend exec bash run.sh 'PHREOX_BRIDGE_PORT={{SERVER_PORT}} PHREOX_DATA_DIR=/home/container/data exec java {{PHREOX_JAVA_OPTS}} -jar phreox-backend.jar'",
+    "startup": "bash run.sh backend",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox backend"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("backend"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
@@ -144,7 +144,7 @@ write("egg-phreox-web.json", {
     "features": None,
     "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=web exec bash run.sh 'exec node web/server.mjs'",
+    "startup": "bash run.sh web",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox web: listening"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("web"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [channel, repository, seconds, token],
@@ -160,7 +160,7 @@ write("egg-phreox-website.json", {
     "features": None,
     "docker_images": {"Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=website exec bash run.sh 'PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) exec node web/server.mjs'",
+    "startup": "bash run.sh website",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox website: listening"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("website"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
@@ -183,7 +183,7 @@ write("egg-phreox-space.json", {
     "features": None,
     "docker_images": {"Java 25": "ghcr.io/pterodactyl/yolks:java_25"},
     "file_denylist": [],
-    "startup": "PHREOX_ARTIFACT=space exec bash run.sh 'PHREOX_SPACE_HOST=0.0.0.0 PHREOX_SPACE_PORT={{SERVER_PORT}} PHREOX_SPACE_DATA_DIR=/home/container/data exec java {{PHREOX_JAVA_OPTS}} -jar phreox-space.jar'",
+    "startup": "bash run.sh space",
     "config": {"files": "{}", "startup": json.dumps({"done": "Phreox space listening on"}), "logs": "{}", "stop": "^C"},
     "scripts": {"installation": {"script": installer("space"), "container": "ghcr.io/ptero-eggs/installers:debian", "entrypoint": "bash"}},
     "variables": [
