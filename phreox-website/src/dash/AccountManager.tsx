@@ -2,6 +2,7 @@ import { useState } from "react";
 import { call, type Me, useLoad } from "../api.ts";
 import { type TextKey, useT } from "../i18n.ts";
 import { Notes } from "./Notes.tsx";
+import { useOverlays } from "./overlay.tsx";
 import { ago, Avatar, Button, ErrorLine, Heading, inputClass, Pill, type Tone, useAction } from "./ui.tsx";
 
 export type Detail = { id: string; username: string; createdAt: number; profile: string | null; standing: "" | "suspended" | "banned"; standingUntil: number; standingReason: string; warnings: number };
@@ -31,11 +32,12 @@ function Moderation({ detail, me, reload }: { detail: Detail; me: Me; reload: ()
   const [duration, setDuration] = useState(24);
   const [reason, setReason] = useState("");
   const { error, run } = useAction();
+  const { ask } = useOverlays();
   const isSuper = me.flags.includes("super-admin");
   const can = reason.trim().length >= 3;
 
-  function issue() {
-    if (kind !== "warn" && !confirm(t(kind === "ban" ? "dash.mod.confirmBan" : "dash.mod.confirmSuspend", { name: detail.username }))) return;
+  async function issue() {
+    if (kind !== "warn" && !await ask({ title: t(kind === "ban" ? "dash.mod.confirmBan" : "dash.mod.confirmSuspend", { name: detail.username }), text: reason, confirm: t(`dash.mod.do.${kind}` as TextKey), danger: true })) return;
 
     void run(async () => {
       await call("POST", `/admin/support/accounts/${detail.id}/sanctions`, { kind, reason, hours: kind === "suspend" ? duration : undefined });
@@ -59,7 +61,7 @@ function Moderation({ detail, me, reload }: { detail: Detail; me: Me; reload: ()
         <p className="text-xs text-(--text-dark)">{t(`dash.mod.hint.${kind}` as TextKey)}</p>
         <input className={inputClass} value={reason} maxLength={500} placeholder={t("dash.mod.reason")} onChange={(event) => setReason(event.target.value)} />
         <div className="flex items-center gap-3">
-          <Button kind={kind === "warn" ? "primary" : "danger"} disabled={!can} onClick={issue}>{t(`dash.mod.do.${kind}` as TextKey)}</Button>
+          <Button kind={kind === "warn" ? "primary" : "danger"} disabled={!can} onClick={() => void issue()}>{t(`dash.mod.do.${kind}` as TextKey)}</Button>
           <span className="text-xs text-(--text-dark)">{t("dash.mod.told")}</span>
         </div>
         <ErrorLine error={error} />
@@ -186,7 +188,7 @@ function DeleteAccountTab({ detail, onDeleted }: { detail: Detail; onDeleted?: (
 }
 
 /** One account for the team: what was done about it, its name and profile, the notes about it. */
-export function AccountManager({ accountId, me, onDeleted }: { accountId: string; me: Me; onDeleted?: () => void }) {
+export function AccountManager({ accountId, me, onDeleted, bare }: { accountId: string; me: Me; onDeleted?: () => void; bare?: boolean }) {
   const { t, lang } = useT();
   const [tab, setTab] = useState<"mod" | "profile" | "notes" | "delete">("mod");
   const detail = useLoad(() => call<Detail>("GET", `/admin/support/accounts/${accountId}`), [accountId]);
@@ -200,11 +202,14 @@ export function AccountManager({ accountId, me, onDeleted }: { accountId: string
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Avatar name={value.username} size={36} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">{value.username}</p>
-          <p className="font-mono text-xs text-(--text-dark)">{value.id}</p>
-        </div>
+        {/* Inside the panel of an account the name stands above already. */}
+        {!bare && <>
+          <Avatar name={value.username} size={36} />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{value.username}</p>
+            <p className="text-xs tabular-nums text-(--text-dark)">{value.id}</p>
+          </div>
+        </>}
         {value.standing === "banned" && <Pill tone="red">{t("dash.mod.banned")}</Pill>}
         {value.standing === "suspended" && <Pill tone="red">{t("dash.mod.suspendedUntil", { time: new Date(value.standingUntil).toLocaleString(lang) })}</Pill>}
         {value.warnings > 0 && <Pill tone="orange">{t("dash.mod.warnings", { n: value.warnings })}</Pill>}

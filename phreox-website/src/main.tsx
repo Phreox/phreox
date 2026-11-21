@@ -1,14 +1,16 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { SessionContext, useSessionState } from "./api.ts";
 import { Layout } from "./components/Layout.tsx";
 import "./index.css";
-import { Dashboard } from "./pages/Dashboard.tsx";
 import { Download } from "./pages/Download.tsx";
 import { Home } from "./pages/Home.tsx";
 import { About, Features, Legal, NotFound, PlanLayout, EmberPage, GlimmerPage, VoltPage, Safety, Support } from "./pages/Info.tsx";
 import { NewsList, NewsPage } from "./pages/News.tsx";
+
+// The dashboard is for the team: the public pages do not carry its code.
+const Dashboard = lazy(() => import("./pages/Dashboard.tsx").then((module) => ({ default: module.Dashboard })));
 
 function Root() {
   const { me, reload, ready } = useSessionState();
@@ -24,7 +26,7 @@ function Root() {
             <Route path="download" element={<Download />} />
             <Route path="news" element={<NewsList />} />
             <Route path="news/:id" element={<NewsPage />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="dashboard" element={<Suspense fallback={null}><Dashboard /></Suspense>} />
             <Route path="features" element={<Features />} />
             <Route element={<PlanLayout />}>
               <Route path="ember" element={<EmberPage />} />

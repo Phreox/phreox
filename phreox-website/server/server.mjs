@@ -89,9 +89,51 @@ async function readBody(request) {
   return Buffer.concat(parts).toString("utf8");
 }
 
-/** A call to the service. Returns its status and its answer as text. */
-async function callService(method, pathname, token, body) {
-  const response = await fetch(`${service}/api/v1${pathname}`, {
+// ---- the services of the cluster ----------------------------------------------------------------------------------------
+//
+// PHREOX_SERVICE_URL is the entry point. A cluster names its services there (GET /service/roots); this server stays with the one it
+// talks to (the second factor of an admin is remembered by that one) and goes to the next when it does not answer, so the dashboard
+// stays usable while a service is away.
+
+const downMillis = 15_000;
+const rootsMillis = 60_000;
+const rootsRetryMillis = 10_000;
+const maxTries = 3;
+const gone = new Set([502, 503, 504]);
+const mesh = { roots: [], current: service, down: new Map(), askAt: 0 };
+
+/** The address of a service in the form it is called by, or null for one this server must not go to. */
+function acceptable(address) {
+  try {
+    const url = new URL(String(address));
+
+    if (url.username || url.password || url.search || url.hash || !["", "/"].includes(url.pathname)) return null;
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && service.startsWith("http://"))) return null;
+
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function isDown(base) {
+  return (mesh.down.get(base) ?? 0) > Date.now();
+}
+
+/** The services in the order they are tried: the one in use, the others of the cluster, the entry point; those that did not answer last. */
+function candidates() {
+  const all = [...new Set([mesh.current, ...mesh.roots, service])];
+
+  return [...all.filter((base) => !isDown(base)), ...all.filter(isDown)];
+}
+
+function markDown(base) {
+  mesh.down.set(base, Date.now() + downMillis);
+  mesh.askAt = Math.min(mesh.askAt, Date.now() + rootsRetryMillis);
+}
+
+async function fetchService(base, method, pathname, token, body) {
+  const response = await fetch(`${base}/api/v1${pathname}`, {
     method,
     headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
     body,
@@ -99,6 +141,66 @@ async function callService(method, pathname, token, body) {
   });
 
   return { status: response.status, text: await response.text() };
+}
+
+/** Asks which services are up, when the last answer is old. */
+async function askEntryPoint() {
+  if (Date.now() < mesh.askAt) return;
+
+  mesh.askAt = Date.now() + rootsRetryMillis;
+
+  for (const base of candidates().slice(0, maxTries)) {
+    try {
+      const { status, text } = await fetchService(base, "GET", "/service/roots");
+
+      if (gone.has(status)) {
+        markDown(base);
+        continue;
+      }
+      if (status === 200) {
+        const answer = JSON.parse(text);
+
+        mesh.roots = [...new Set((Array.isArray(answer.roots) ? answer.roots : []).map(acceptable).filter(Boolean))].slice(0, 8);
+        mesh.askAt = Date.now() + (Number(answer.ttlSeconds) > 0 ? Number(answer.ttlSeconds) * 1000 : rootsMillis);
+      }
+
+      return;
+    } catch {
+      markDown(base);
+    }
+  }
+}
+
+/** A call to the service. Returns its status and its answer as text. */
+async function callService(method, pathname, token, body) {
+  await askEntryPoint();
+
+  let answer = null;
+  let failure = null;
+
+  for (const base of candidates().slice(0, maxTries)) {
+    try {
+      answer = await fetchService(base, method, pathname, token, body);
+    } catch (error) {
+      failure = error;
+      markDown(base);
+      continue;
+    }
+
+    if (gone.has(answer.status)) {
+      markDown(base);
+      continue;
+    }
+
+    mesh.down.delete(base);
+    mesh.current = base;
+
+    return answer;
+  }
+
+  if (answer) return answer;
+
+  throw failure ?? new Error("No service answers");
 }
 
 // ---- the session ---------------------------------------------------------------------------------------------------
@@ -224,6 +326,8 @@ async function api(request, response, url) {
 
   // The elevation of the second factor changed: ask the service again next time.
   if (pathname.startsWith("/admin/mfa")) sessions.delete(token);
+  // The time of the second factor is over: what this server remembers of the session is old.
+  if (status === 403 && text.includes("mfa-required")) sessions.delete(token);
 
   send(response, status, text, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 }
