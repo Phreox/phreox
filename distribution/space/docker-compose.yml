@@ -4,6 +4,10 @@ services:
     working_dir: /app
     command: ["java", "-XX:+UseZGC", "-XX:MaxRAMPercentage=70", "-XX:+ExitOnOutOfMemoryError", "-jar", "phreox-space.jar"]
     restart: unless-stopped
+    # The console of the server: docker attach <container> (leave it with Ctrl+P Ctrl+Q), or one command at a time with
+    # docker compose exec space java -jar phreox-space.jar <command>
+    stdin_open: true
+    tty: true
     ports:
       - "${PHREOX_SPACE_BIND:-0.0.0.0}:${PHREOX_SPACE_PORT:-8082}:8082"
     environment:

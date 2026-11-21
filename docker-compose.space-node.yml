@@ -9,6 +9,10 @@ services:
       context: .
       dockerfile: docker/space-node/Dockerfile
     restart: unless-stopped
+    # The console of the server: docker attach <container> (leave it with Ctrl+P Ctrl+Q), or one command at a time with
+    # docker compose -f docker-compose.space-node.yml exec <service> java -jar phreox-space.jar <command>
+    stdin_open: true
+    tty: true
     environment:
       PHREOX_UPDATE_CHANNEL: ${PHREOX_UPDATE_CHANNEL:-release}
       PHREOX_UPDATE_REPO: ${PHREOX_UPDATE_REPO:-Phreox/releases}
@@ -18,8 +22,6 @@ services:
       PHREOX_SPACE_DATA_DIR: /data
       PHREOX_SPACE_SERVICE_URL: ${PHREOX_SPACE_SERVICE_URL:-https://service.phreox.talk}
       PHREOX_SPACE_PUBLIC_URL: ${PHREOX_SPACE_PUBLIC_URL:?set PHREOX_SPACE_PUBLIC_URL in .env, the address the apps reach this node at}
-      PHREOX_SPACE_USERNAME: ${PHREOX_SPACE_USERNAME:-space-node}
-      PHREOX_SPACE_PASSWORD: ${PHREOX_SPACE_PASSWORD:?set PHREOX_SPACE_PASSWORD in .env}
       PHREOX_SPACE_DEFAULT_CATEGORY: ${PHREOX_SPACE_DEFAULT_CATEGORY:-Text}
       PHREOX_SPACE_DEFAULT_CHANNEL: ${PHREOX_SPACE_DEFAULT_CHANNEL:-general}
       PHREOX_SPACE_DEFAULT_PRIVATE_CHANNEL: ${PHREOX_SPACE_DEFAULT_PRIVATE_CHANNEL:-}

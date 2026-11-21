@@ -46,7 +46,9 @@ bash update.sh || true
 while true; do
   running="$(version)"
   echo "[phreox] starting ${running:-without a release}"
-  bash -c "$command" &
+  # What is typed into the console of the panel goes to the server (the space server has commands). A job in the background reads
+  # nothing unless it is told where from.
+  bash -c "$command" <&0 &
   child=$!
 
   restart=0

@@ -6,7 +6,7 @@
   },
   "exported_at": "2026-11-17T00:00:00+00:00",
   "name": "Phreox Space",
-  "description": "Self-hosted Space node with persistent data, configurable channel and role templates, explicit web origins and checksum-verified release updates.",
+  "description": "Self-hosted Space node with persistent data, configurable channel and role templates, explicit web origins and checksum-verified release updates. No account is needed: the server registers with its own key. Type help in the console; the first person who comes in with an invite code owns the server.",
   "features": null,
   "docker_images": {
     "Java 25": "ghcr.io/pterodactyl/yolks:java_25"
@@ -79,7 +79,7 @@
     },
     {
       "name": "Public URL",
-      "description": "Public HTTPS address of this node, including its port when nonstandard. Configure a TLS reverse proxy.",
+      "description": "Public HTTPS address of this node, including its port when nonstandard. Configure a TLS reverse proxy. The service has to reach the node there: that is how it knows the address is yours.",
       "env_variable": "PHREOX_SPACE_PUBLIC_URL",
       "default_value": "https://space.example.com",
       "user_viewable": true,
@@ -88,23 +88,13 @@
       "field_type": "text"
     },
     {
-      "name": "Operator username",
-      "description": "Dedicated Phreox service account that owns this node's registration.",
-      "env_variable": "PHREOX_SPACE_USERNAME",
-      "default_value": "",
+      "name": "Space name",
+      "description": "Name of the space this server makes at its first start. Rename it later in the console: space rename <name>.",
+      "env_variable": "PHREOX_SPACE_NAME",
+      "default_value": "My Space",
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|string|max:100",
-      "field_type": "text"
-    },
-    {
-      "name": "Operator password",
-      "description": "Password for the operator account.",
-      "env_variable": "PHREOX_SPACE_PASSWORD",
-      "default_value": "",
-      "user_viewable": false,
-      "user_editable": true,
-      "rules": "required|string|max:255",
       "field_type": "text"
     },
     {
