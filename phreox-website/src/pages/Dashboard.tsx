@@ -512,6 +512,7 @@ function TestersTab({ tick }: { tick: number }) {
     <div className="flex flex-col gap-8">
       <TokensSection tick={tick} />
       <TesterSection tick={tick} />
+      <XboxSection tick={tick} />
     </div>
   );
 }
@@ -586,6 +587,67 @@ function TokensSection({ tick }: { tick: number }) {
           </Card>
         ))}
       </div>
+    </section>
+  );
+}
+
+type XboxLink = { state: "unavailable" | "unlinked" | "pending" | "linked" | "failed"; gamertag: string | null; userCode: string | null; verificationUri: string | null };
+
+/**
+ * The Xbox account of Phreox. Xbox tells what a profile plays only to a signed-in account, so the service has one: it is linked here
+ * once, with a code that is entered at Microsoft, and from then on the service looks up what the Gamertag of a member plays.
+ */
+function XboxSection({ tick }: { tick: number }) {
+  const { t } = useT();
+  const [poll, setPoll] = useState(0);
+  const link = useLoad(() => call<XboxLink>("GET", "/admin/xbox"), [tick, poll]);
+  const { error, run } = useAction();
+  const state = link.value?.state;
+
+  // While the code waits to be entered, the state is read again every few seconds.
+  useEffect(() => {
+    if (state !== "pending") return;
+
+    const timer = setTimeout(() => setPoll((count) => count + 1), 3000);
+
+    return () => clearTimeout(timer);
+  }, [state, poll]);
+
+  const start = () => void run(async () => {
+    await call<XboxLink>("POST", "/admin/xbox");
+    link.reload();
+  });
+
+  return (
+    <section className="grid gap-6 xl:grid-cols-3">
+      <Card className="flex h-fit flex-col gap-4">
+        <Heading>{t("dash.xbox.title")}</Heading>
+        <p className="text-sm text-(--text-dark)">{t("dash.xbox.hint")}</p>
+        {state === "unavailable" && <p className="text-sm text-(--text-washed)">{t("dash.xbox.unavailable")}</p>}
+        {state === "linked" && <p className="text-sm">{t("dash.xbox.linked")} <span className="font-semibold">{link.value?.gamertag}</span></p>}
+        {state === "failed" && <p role="alert" className="text-sm text-red-400">{t("dash.xbox.failed")}</p>}
+        {state === "pending" && link.value && (
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-(--text-washed)">{t("dash.xbox.enterCode")}</p>
+            <code className="mt-2 block font-mono text-2xl tracking-widest">{link.value.userCode}</code>
+            <a className="mt-2 block break-all text-sm text-(--accent) hover:underline" href={link.value.verificationUri ?? "#"} target="_blank" rel="noopener noreferrer">{link.value.verificationUri}</a>
+          </div>
+        )}
+        {(error ?? link.error) && <p role="alert" className="text-sm text-red-400">{error ?? link.error}</p>}
+        <div className="flex flex-wrap gap-2">
+          {(state === "unlinked" || state === "failed" || state === "linked") && (
+            <button type="button" className="btn btn-primary btn-small cursor-pointer" onClick={start}>{t(state === "linked" ? "dash.xbox.relink" : "dash.xbox.link")}</button>
+          )}
+          {(state === "linked" || state === "pending") && (
+            <button type="button" className="btn btn-ghost btn-small cursor-pointer" onClick={() => {
+              if (state === "pending" || confirm(t("dash.xbox.confirmUnlink"))) void run(async () => {
+                await call("DELETE", "/admin/xbox");
+                link.reload();
+              });
+            }}>{t(state === "pending" ? "dash.xbox.cancel" : "dash.xbox.unlink")}</button>
+          )}
+        </div>
+      </Card>
     </section>
   );
 }
