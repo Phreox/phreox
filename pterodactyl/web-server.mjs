@@ -1,6 +1,7 @@
 // The web server of phreox.talk: serves the built app (./site) without any dependency. Unknown paths answer index.html, because the
 // app routes in the browser. The files under /assets have a hash in their name and may be cached for good, everything else may not.
-import { createReadStream } from "node:fs";
+import { createHash } from "node:crypto";
+import { createReadStream, readFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer, request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -9,6 +10,19 @@ import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "site");
 const port = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 8080);
+
+// What the open pages compare with the version they were loaded with (GET /version): a page that finds another one reloads itself, so an
+// update of the server reaches every open tab. PHREOX_WEB_VERSION names it (the release, as run.sh passes it); without it the hash of
+// index.html stands in, which changes with every build because it names the hashed assets.
+const version = process.env.PHREOX_WEB_VERSION?.trim() || indexHash();
+
+function indexHash() {
+  try {
+    return createHash("sha256").update(readFileSync(path.join(root, "index.html"))).digest("hex").slice(0, 16);
+  } catch {
+    return "unknown";
+  }
+}
 
 // The app talks to the service on the same origin under /svc: the service's own cross-origin rules do not apply then, and the
 // session header and the event stream pass through unchanged.
@@ -164,6 +178,13 @@ createServer(async (request, response) => {
   const requested = new URL(request.url ?? "/", "http://localhost");
   if (requested.pathname === SVC || requested.pathname.startsWith(SVC + "/")) {
     forward(request, response, requested.pathname, requested.search);
+    return;
+  }
+
+  if (requested.pathname === "/version" && (request.method === "GET" || request.method === "HEAD")) {
+    const body = JSON.stringify({ version });
+    response.writeHead(200, { ...headers, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body), "Cache-Control": "no-store" });
+    response.end(request.method === "HEAD" ? undefined : body);
     return;
   }
 

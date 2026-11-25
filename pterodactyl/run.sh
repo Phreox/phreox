@@ -18,7 +18,7 @@ interval="${PHREOX_UPDATE_SECONDS:-30}"
 case "${1:-${PHREOX_ARTIFACT:-}}" in
   backend) artifact=backend; command='PHREOX_BRIDGE_PORT=${SERVER_PORT} PHREOX_DATA_DIR=/home/container/data exec java ${PHREOX_JAVA_OPTS} -jar phreox-backend.jar' ;;
   space)   artifact=space;   command='PHREOX_SPACE_HOST=0.0.0.0 PHREOX_SPACE_PORT=${SERVER_PORT} PHREOX_SPACE_DATA_DIR=/home/container/data exec java ${PHREOX_JAVA_OPTS} -jar phreox-space.jar' ;;
-  web)     artifact=web;     command='exec node web/server.mjs' ;;
+  web)     artifact=web;     command='PHREOX_WEB_VERSION=$(cat app/current 2>/dev/null) exec node web/server.mjs' ;;
   website) artifact=website; command='PHREOX_SITE_VERSION=$(cat app/current 2>/dev/null) exec node web/server.mjs' ;;
   *)       artifact="${PHREOX_ARTIFACT:-}"; command="$*" ;;
 esac
